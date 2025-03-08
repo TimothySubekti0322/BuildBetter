@@ -1,4 +1,4 @@
-package com.buildbetter.auth.dto;
+package com.buildbetter.user.dto;
 
 public class SendOTPResponse {
     

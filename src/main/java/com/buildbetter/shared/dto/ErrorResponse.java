@@ -2,11 +2,13 @@ package com.buildbetter.shared.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
-public class ErrorResponse {
+@NoArgsConstructor
+public class ErrorResponse<T> {
     private int code;
     private String status;
-    private String error;
+    private T error;
 }

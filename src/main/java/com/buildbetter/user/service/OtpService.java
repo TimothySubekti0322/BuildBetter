@@ -1,4 +1,4 @@
-package com.buildbetter.auth.service;
+package com.buildbetter.user.service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -7,35 +7,46 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.buildbetter.auth.AuthAPI;
-import com.buildbetter.auth.dto.VerifiedUserRequest;
-import com.buildbetter.auth.exception.OtpException;
-import com.buildbetter.auth.model.Otp;
-import com.buildbetter.auth.repository.OtpRepository;
-import com.buildbetter.auth.service.ratelimit.OtpRateLimiter;
 import com.buildbetter.shared.exception.BadRequestException;
-import com.buildbetter.user.UserAPI;
+import com.buildbetter.shared.exception.ForbiddenException;
+import com.buildbetter.shared.exception.InternalServerErrorException;
+import com.buildbetter.shared.exception.NotFoundException;
+import com.buildbetter.shared.exception.TooManyRequestException;
+import com.buildbetter.user.dto.SendOTPRequest;
+import com.buildbetter.user.model.Otp;
+import com.buildbetter.user.model.User;
+import com.buildbetter.user.repository.OtpRepository;
+import com.buildbetter.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class OtpService implements AuthAPI {
+public class OtpService {
 
     private final OtpRepository otpRepository;
+    private final UserRepository userRepository;
     private final JavaMailSender mailSender;
-    private final OtpRateLimiter otpRateLimiter;
+    private final RateLimiterService rateLimiterService;
 
-    private final UserAPI userAPI;
+    // Send OTP
+    public void sendOtp(SendOTPRequest request) {
 
-    @Override
-    @Transactional
-    public void sendOtp(String userId, String email) {
+        String email = request.getEmail();
 
-        if (!otpRateLimiter.canSendOtp(userId)) {
-            throw new OtpException("You have reached the maximum number of OTP attempts. Please try again later.");
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        String userId = user.getId().toString();
+
+        if (user.getIsVerified()) {
+            throw new BadRequestException("User already verified");
+        }
+
+        if (!rateLimiterService.canSendOtp(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT)) {
+            throw new TooManyRequestException(
+                    "You have reached the maximum number of OTP attempts. Please try again later.");
         }
 
         // Generate a random 6-digit OTP
@@ -62,7 +73,6 @@ public class OtpService implements AuthAPI {
             otpRepository.save(existingOtp);
 
         } else {
-            // Create and save the OTP entity
             Otp otp = new Otp();
             otp.setId(UUID.randomUUID());
             otp.setUserId(userId);
@@ -75,14 +85,15 @@ public class OtpService implements AuthAPI {
             otpRepository.save(otp);
         }
 
-        // Send the OTP via email
-        sendOtpEmail(email, otpCode);
+        // Send OTP via email
+        sendOtpToEmail(email, otpCode);
 
-        // add OTP attempt
-        otpRateLimiter.addOtpAttempt(userId);
+        // Update OTP Attempts
+        rateLimiterService.addOtpAttempt(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT);
     }
 
-    private void sendOtpEmail(String to, String otpCode) {
+    // Send OTP via email
+    private void sendOtpToEmail(String to, String otpCode) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
@@ -90,26 +101,30 @@ public class OtpService implements AuthAPI {
             message.setText("Your OTP code is: " + otpCode);
             mailSender.send(message);
         } catch (Exception e) {
-            throw new OtpException("Failed to send OTP email: " + e.getMessage());
+            throw new InternalServerErrorException("Failed to send OTP email: " + e.getMessage());
         }
     }
 
-    public String verifiedUser(VerifiedUserRequest request) {
-        String userId = request.getUserId();
-        String otpCode = request.getOtp();
-
+    // Verify OTP
+    public Boolean verifyOtp(String userId, String otpCode) {
         Otp otp = otpRepository.findByUserIdAndIsUsedFalse(userId)
-                .orElseThrow(() -> new OtpException("OTP not found or already used."));
+                .orElseThrow(() -> new NotFoundException("OTP not recognized"));
 
         if (!BCrypt.checkpw(otpCode, otp.getHashedOtp())) {
-            throw new BadRequestException("Invalid OTP code.");
+            throw new BadRequestException("Invalid OTP code");
+        }
+
+        if (otp.getExpiredAt().isBefore(LocalDateTime.now())) {
+            throw new ForbiddenException("OTP code has expired");
         }
 
         otp.setIsUsed(true);
+        
         otpRepository.save(otp);
 
-        userAPI.verifiedUser(null);
+        rateLimiterService.resetOtpAttempts(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT);
 
-        return "User verified successfully.";
+        return true;
     }
+
 }

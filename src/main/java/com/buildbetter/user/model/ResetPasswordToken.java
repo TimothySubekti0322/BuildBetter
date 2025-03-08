@@ -1,4 +1,4 @@
-package com.buildbetter.auth.model;
+package com.buildbetter.user.model;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -20,8 +20,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @Entity
 @Builder
-@Table(name = "otps")
-public class Otp {
+@Table(name = "reset_password_tokens")
+public class ResetPasswordToken {
 
     @Id
     private UUID id;
@@ -29,8 +29,8 @@ public class Otp {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(name = "hashed_otp", nullable = false)
-    private String hashedOtp;
+    @Column(name = "hashed_token", nullable = false)
+    private String hashedToken;
 
     @Column(name = "expired_at", nullable = false)
     private LocalDateTime expiredAt;
@@ -40,9 +40,6 @@ public class Otp {
 
     @Column(name = "is_used", nullable = false)
     private boolean isUsed;
-
-    @Column(name = "attempt", nullable = false)
-    private int attempt;
 
     @PrePersist
     public void prePersist() {
@@ -54,7 +51,7 @@ public class Otp {
             this.createdAt = LocalDateTime.now();
         }
         if (this.expiredAt == null) {
-            this.expiredAt = this.createdAt.plusMinutes(10);
+            this.expiredAt = this.createdAt.plusMinutes(20);
         }
     }
 
