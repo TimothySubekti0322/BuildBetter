@@ -70,6 +70,13 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Deploy on EC2
         env:
           AWS_REGION: ${{ env.AWS_REGION }}
@@ -83,22 +90,29 @@ jobs:
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           REDIS_HOST: ${{ secrets.REDIS_HOST }}
           REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
         run: |
-          export ECR_REG="${{ env.ECR_REGISTRY }}"
-          export ECR_REPO="${{ env.ECR_REPOSITORY }}"
-          export IMG_TAG="${{ env.IMAGE_TAG }}"
-          export DB_URL="${{ secrets.DB_URL }}"
-          export DB_USERNAME="${{ secrets.DB_USERNAME }}"
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-          export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
-          export REDIS_HOST="${{ secrets.REDIS_HOST }}"
-          export REDIS_PORT="${{ secrets.REDIS_PORT }}"
-
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
             set -e
+
+            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
+            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+            export AWS_REGION='${{ env.AWS_REGION }}'
+
+            export ECR_REG='${{ env.ECR_REGISTRY }}'
+            export ECR_REPO='${{ env.ECR_REPOSITORY }}'
+            export TAG='${{ env.IMAGE_TAG }}'
+
+            export DB_URL='${{ secrets.DB_URL }}'
+            export DB_USERNAME='${{ secrets.DB_USERNAME }}'
+            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+            export JWT_SECRET='${{ secrets.JWT_SECRET }}'
+            export MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}'
+            export REDIS_HOST='${{ secrets.REDIS_HOST }}'
+            export REDIS_PORT='${{ secrets.REDIS_PORT }}'
 
             AWS_REGION='${{ env.AWS_REGION }}'
             ECR_REG='${{ env.ECR_REGISTRY }}'
@@ -107,6 +121,7 @@ jobs:
 
             ECR_PATH="\$ECR_REG/\$ECR_REPO"
 
+            echo ":: Logging in to ECR"
             aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REG}
 
             echo ":: Pulling new image \$ECR_PATH:\$TAG"
