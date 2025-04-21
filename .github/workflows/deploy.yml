@@ -45,8 +45,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        run: aws ecr get-login-password --region $AWS_REGION \
-          | docker login --username AWS --password-stdin $ECR_REGISTRY
+        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
       # ─── Build & tag image ─────────────────────────────────────────────────────
       - name: Build Docker image
@@ -103,18 +102,7 @@ jobs:
             docker rm -f buildbetter-backend || true
 
             echo ":: Starting new container"
-            docker run -d --name buildbetter-backend \
-              --restart unless-stopped \
-              --network internal-network \
-              -p 8080:8080 \
-              -e DB_URL="${{ env.DB_URL }}" \
-              -e DB_USERNAME="${{ env.DB_USERNAME }}" \
-              -e DB_PASSWORD="${{ env.DB_PASSWORD }}" \
-              -e JWT_SECRET="${{ env.JWT_SECRET }}" \
-              -e MAIL_PASSWORD="${{ env.MAIL_PASSWORD }}" \
-              -e REDIS_HOST="${{ env.REDIS_HOST }}" \
-              -e REDIS_PORT="${{ env.REDIS_PORT }}" \
-              $ECR:$TAG
+            docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL="${{ env.DB_URL }}" -e DB_USERNAME="${{ env.DB_USERNAME }}" -e DB_PASSWORD="${{ env.DB_PASSWORD }}" -e JWT_SECRET="${{ env.JWT_SECRET }}" -e MAIL_PASSWORD="${{ env.MAIL_PASSWORD }}" -e REDIS_HOST="${{ env.REDIS_HOST }}" -e REDIS_PORT="${{ env.REDIS_PORT }}" $ECR:$TAG
 
             echo ":: Deployed $ECR:$TAG"
           EOF
