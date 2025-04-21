@@ -115,20 +115,18 @@ jobs:
             ECR_PATH="$ECR_REG/$ECR_REPO"
             TAG="$IMG_TAG"
 
-            sudo su
-
             echo ":: Pulling new image \$ECR_PATH:\$TAG"
-            docker pull \$ECR_PATH:\$TAG
+            sudo docker pull \$ECR_PATH:\$TAG
 
             echo ":: Ensure network 'internal-network' exists"
-            docker network inspect internal-network >/dev/null 2>&1 \
+            sudo docker network inspect internal-network >/dev/null 2>&1 \
               || docker network create internal-network
 
             echo ":: Stopping old container (if running)"
-            docker rm -f buildbetter-backend || true
+            sudo docker rm -f buildbetter-backend || true
 
             echo ":: Starting new container"
-            docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
+            sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
 
             echo ":: Deployed \$ECR_PATH:\$TAG"
           EOF
