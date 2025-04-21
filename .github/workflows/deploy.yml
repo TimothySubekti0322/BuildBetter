@@ -70,32 +70,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        run: aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-
       - name: Deploy on EC2
         env:
-          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          REDIS_HOST: ${{ secrets.REDIS_HOST }}
-          REDIS_PORT: ${{ secrets.REDIS_PORT }}
-          # Add Spring-specific variables here if needed
-          SPRING_DATASOURCE_URL: jdbc:postgresql://${{ secrets.RDS_ENDPOINT }}:5432/build_better
-        run: |
+        AWS_REGION: ${{ env.AWS_REGION }}
+        ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+        ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        DB_URL: ${{ secrets.DB_URL }}
+        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+        REDIS_HOST: ${{ secrets.REDIS_HOST }}
+        REDIS_PORT: ${{ secrets.REDIS_PORT }}
 
+        run: |
           export ECR_REG="${{ env.ECR_REGISTRY }}"
           export ECR_REPO="${{ env.ECR_REPOSITORY }}"
           export IMG_TAG="${{ env.IMAGE_TAG }}"
@@ -109,21 +98,16 @@ jobs:
 
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
-            export ECR_REG="${{ env.ECR_REGISTRY }}"
-            export ECR_REPO="${{ env.ECR_REPOSITORY }}"
-            export IMG_TAG="${{ env.IMAGE_TAG }}"
-            export DB_URL="${{ secrets.DB_URL }}"
-            export DB_USERNAME="${{ secrets.DB_USERNAME }}"
-            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-            export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
-            export REDIS_HOST="${{ secrets.REDIS_HOST }}"
-            export REDIS_PORT="${{ secrets.REDIS_PORT }}"
-
             set -e
 
-            ECR_PATH="$ECR_REG/$ECR_REPO"
-            TAG="$IMG_TAG"
+            AWS_REGION='${{ env.AWS_REGION }}'
+            ECR_REG='${{ env.ECR_REGISTRY }}'
+            ECR_REPO='${{ env.ECR_REPOSITORY }}'
+            TAG='${{ env.IMAGE_TAG }}'
+
+            ECR_PATH="\$ECR_REG/\$ECR_REPO"
+
+            aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REG}
 
             echo ":: Pulling new image \$ECR_PATH:\$TAG"
             sudo docker pull \$ECR_PATH:\$TAG
