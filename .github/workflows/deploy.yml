@@ -71,83 +71,64 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Deploy on EC2
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          REDIS_HOST: ${{ secrets.REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          # Add Spring-specific variables here if needed
+          SPRING_DATASOURCE_URL: jdbc:postgresql://${{ secrets.RDS_ENDPOINT }}:5432/build_better
         run: |
-          # Store values in variables for easier use
+
           ECR_REG="${{ env.ECR_REGISTRY }}"
           ECR_REPO="${{ env.ECR_REPOSITORY }}"
           IMG_TAG="${{ env.IMAGE_TAG }}"
           DB_URL="${{ secrets.DB_URL }}"
-          DB_USER="${{ secrets.DB_USERNAME }}"
-          DB_PASS="${{ secrets.DB_PASSWORD }}"
-          JWT_SEC="${{ secrets.JWT_SECRET }}"
-          MAIL_PASS="${{ secrets.MAIL_PASSWORD }}"
-          REDIS_H="${{ secrets.REDIS_HOST }}"
-          REDIS_P="${{ secrets.REDIS_PORT }}"
+          DB_USERNAME="${{ secrets.DB_USERNAME }}"
+          DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
+          REDIS_HOST="${{ secrets.REDIS_HOST }}"
+          REDIS_PORT="${{ secrets.REDIS_PORT }}"
 
-          # Create deployment script with hard-coded values
-          cat > deploy.sh << EOL
-          #!/bin/bash
-          set -e
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
-          ECR_PATH="${ECR_REG}/${ECR_REPO}"
-          TAG="${IMG_TAG}"
+            export ECR_REG="${{ env.ECR_REGISTRY }}"
+            export ECR_REPO="${{ env.ECR_REPOSITORY }}"
+            export IMG_TAG="${{ env.IMAGE_TAG }}"
+            export DB_URL="${{ secrets.DB_URL }}"
+            export DB_USERNAME="${{ secrets.DB_USERNAME }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
+            export REDIS_HOST="${{ secrets.REDIS_HOST }}"
+            export REDIS_PORT="${{ secrets.REDIS_PORT }}"
 
-          echo ":: Pulling new image \${ECR_PATH}:\${TAG}"
-          docker pull \${ECR_PATH}:\${TAG}
+            set -e
 
-          echo ":: Ensure network 'internal-network' exists"
-          docker network inspect internal-network >/dev/null 2>&1 || docker network create internal-network
+            ECR_PATH="$ECR_REG/$ECR_REPO"
+            TAG="$IMG_TAG"
 
-          echo ":: Stopping old container (if running)"
-          docker rm -f buildbetter-backend || true
+            sudo su
 
-          echo ":: Starting new container"
-          docker run -d --name buildbetter-backend --restart unless-stopped --network internal-network -p 8080:8080 -e DB_URL="${DB_URL}" -e DB_USERNAME="${DB_USER}" -e DB_PASSWORD="${DB_PASS}" -e JWT_SECRET="${JWT_SEC}" -e MAIL_PASSWORD="${MAIL_PASS}" -e REDIS_HOST="${REDIS_H}" -e REDIS_PORT="${REDIS_P}" \${ECR_PATH}:\${TAG}
+            echo ":: Pulling new image \$ECR_PATH:\$TAG"
+            docker pull \$ECR_PATH:\$TAG
 
-          echo ":: Deployed \${ECR_PATH}:\${TAG}"
-          EOL
+            echo ":: Ensure network 'internal-network' exists"
+            docker network inspect internal-network >/dev/null 2>&1 \
+              || docker network create internal-network
 
-          # Copy script to remote host and execute
-          chmod +x deploy.sh
-          scp -o StrictHostKeyChecking=no deploy.sh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/deploy.sh
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "bash ~/deploy.sh && rm ~/deploy.sh"
+            echo ":: Stopping old container (if running)"
+            docker rm -f buildbetter-backend || true
 
-      # - name: Deploy on EC2
-      #   env:
-      #     ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-      #     ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-      #     IMAGE_TAG: ${{ env.IMAGE_TAG }}
-      #     DB_URL: ${{ secrets.DB_URL }}
-      #     DB_USERNAME: ${{ secrets.DB_USERNAME }}
-      #     DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      #     MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-      #     REDIS_HOST: ${{ secrets.REDIS_HOST }}
-      #     REDIS_PORT: ${{ secrets.REDIS_PORT }}
-      #     # Add Spring-specific variables here if needed
-      #     SPRING_DATASOURCE_URL: jdbc:postgresql://${{ secrets.RDS_ENDPOINT }}:5432/build_better
-      #   run: |
+            echo ":: Starting new container"
+            docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
 
-      #     ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-      #       set -e
-
-      #       ECR_PATH="$ECR_REG/$ECR_REPO"
-      #       TAG="$IMG_TAG"
-
-      #       sudo su
-
-      #       echo ":: Pulling new image \$ECR_PATH:\$TAG"
-      #       docker pull \$ECR_PATH:\$TAG
-
-      #       echo ":: Ensure network 'internal-network' exists"
-      #       docker network inspect internal-network >/dev/null 2>&1 \
-      #         || docker network create internal-network
-
-      #       echo ":: Stopping old container (if running)"
-      #       docker rm -f buildbetter-backend || true
-
-      #       echo ":: Starting new container"
-      #       docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
-
-      #       echo ":: Deployed \$ECR_PATH:\$TAG"
-      #     EOF
+            echo ":: Deployed \$ECR_PATH:\$TAG"
+          EOF
