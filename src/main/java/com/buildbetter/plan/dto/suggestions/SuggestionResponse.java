@@ -1,7 +1,10 @@
 package com.buildbetter.plan.dto.suggestions;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import com.buildbetter.plan.dto.materials.MaterialResponse;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,7 +43,7 @@ public class SuggestionResponse {
     private String houseImageSide;
 
     // ── material IDs ─────────────────────────────────────────
-    private List<UUID> materials0;
-    private List<UUID> materials1;
-    private List<UUID> materials2;
+    Map<String, Map<String, MaterialResponse>> materials0;
+    Map<String, Map<String, MaterialResponse>> materials1;
+    Map<String, Map<String, MaterialResponse>> materials2;
 }

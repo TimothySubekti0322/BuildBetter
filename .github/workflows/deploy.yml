@@ -1,0 +1,108 @@
+name: Build‑Push‑Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  id-token: write   # <- needed if you use AWS OIDC instead of static keys
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ─── Checkout source ────────────────────────────────────────────────────────
+    - uses: actions/checkout@v4
+
+    # ─── Set up JDK + Maven cache ──────────────────────────────────────────────
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '23'
+
+    # (Optional) cache ~/.m2 to speed up
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-maven-
+
+    # ─── Unit / integration tests ──────────────────────────────────────────────
+    - name: Build with Maven
+      run: mvn -B verify
+
+    # ─── Login to ECR ──────────────────────────────────────────────────────────
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      run: aws ecr get-login-password --region $AWS_REGION \
+           | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+    # ─── Build & tag image ─────────────────────────────────────────────────────
+    - name: Build Docker image
+      run: |
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+    # ─── Push tags ─────────────────────────────────────────────────────────────
+    - name: Push Docker image to ECR
+      run: |
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Copy SSH key
+      uses: webfactory/ssh-agent@v0.8.1
+      with:
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Deploy on EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          set -e
+          ECR="$ECR_REGISTRY/$ECR_REPOSITORY"
+          TAG="$IMAGE_TAG"
+
+          echo "Pulling new image $ECR:$TAG"
+          docker pull $ECR:$TAG
+
+          echo "Stopping old container"
+          docker rm -f build-better || true
+
+          echo "Starting new container"
+          docker run -d --name build-better \
+            --restart unless-stopped \
+            -p 8080:8080 \
+            -e SPRING_DATASOURCE_URL=$SPRING_DATASOURCE_URL \
+            -e SPRING_DATASOURCE_USERNAME=$SPRING_DATASOURCE_USERNAME \
+            -e SPRING_DATASOURCE_PASSWORD=$SPRING_DATASOURCE_PASSWORD \
+            -e SPRING_FLYWAY_URL=$SPRING_DATASOURCE_URL \
+            $ECR:$TAG
+        EOF
+      env:
+        ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+        ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        # the following 3 can be EC2‑level envs or SSM params you export
+        SPRING_DATASOURCE_URL: jdbc:postgresql://<rds‑endpoint>:5432/build_better
+        SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
+        SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}

@@ -1,0 +1,22 @@
+CREATE TABLE suggestions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    house_number VARCHAR(255),
+    land_area INTEGER,
+    building_area INTEGER,
+    style VARCHAR(255),
+    floor INTEGER,
+    rooms INTEGER,
+    building_height INTEGER,
+    designer VARCHAR(255),
+    default_budget INTEGER,
+    budget_min INTEGER[],
+    budget_max INTEGER[],
+    floorplans TEXT[],
+    object TEXT,
+    house_image_front TEXT,
+    house_image_back TEXT,
+    house_image_side TEXT,
+    materials_0 UUID[],
+    materials_1 UUID[],
+    materials_2 UUID[]
+);

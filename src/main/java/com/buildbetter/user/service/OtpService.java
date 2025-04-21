@@ -38,13 +38,13 @@ public class OtpService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        String userId = user.getId().toString();
+        UUID userId = user.getId();
 
         if (user.getIsVerified()) {
             throw new BadRequestException("User already verified");
         }
 
-        if (!rateLimiterService.canSendOtp(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT)) {
+        if (!rateLimiterService.canSendOtp(userId.toString(), RateLimiterService.PREFIX_OTP_RATE_LIMIT)) {
             throw new TooManyRequestException(
                     "You have reached the maximum number of OTP attempts. Please try again later.");
         }
@@ -75,7 +75,7 @@ public class OtpService {
         } else {
             Otp otp = new Otp();
             otp.setId(UUID.randomUUID());
-            otp.setUserId(userId);
+            otp.setUserId(user.getId());
             otp.setHashedOtp(hashedOtp);
             otp.setCreatedAt(LocalDateTime.now());
             otp.setExpiredAt(LocalDateTime.now().plusMinutes(5)); // Valid for 5 minutes
@@ -89,7 +89,7 @@ public class OtpService {
         sendOtpToEmail(email, otpCode);
 
         // Update OTP Attempts
-        rateLimiterService.addOtpAttempt(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT);
+        rateLimiterService.addOtpAttempt(userId.toString(), RateLimiterService.PREFIX_OTP_RATE_LIMIT);
     }
 
     // Send OTP via email
@@ -106,7 +106,7 @@ public class OtpService {
     }
 
     // Verify OTP
-    public Boolean verifyOtp(String userId, String otpCode) {
+    public Boolean verifyOtp(UUID userId, String otpCode) {
         Otp otp = otpRepository.findByUserIdAndIsUsedFalse(userId)
                 .orElseThrow(() -> new NotFoundException("OTP not recognized"));
 
@@ -119,10 +119,10 @@ public class OtpService {
         }
 
         otp.setIsUsed(true);
-        
+
         otpRepository.save(otp);
 
-        rateLimiterService.resetOtpAttempts(userId, RateLimiterService.PREFIX_OTP_RATE_LIMIT);
+        rateLimiterService.resetOtpAttempts(userId.toString(), RateLimiterService.PREFIX_OTP_RATE_LIMIT);
 
         return true;
     }

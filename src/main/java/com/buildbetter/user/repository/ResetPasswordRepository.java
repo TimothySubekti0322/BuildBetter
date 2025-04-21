@@ -10,5 +10,5 @@ import com.buildbetter.user.model.ResetPasswordToken;
 
 @Repository
 public interface ResetPasswordRepository extends JpaRepository<ResetPasswordToken, UUID> {
-    Optional<ResetPasswordToken> findByUserIdAndIsUsedFalse(String userId);
+    Optional<ResetPasswordToken> findByUserIdAndIsUsedFalse(UUID userId);
 }

@@ -27,7 +27,7 @@ public class ResetPasswordToken {
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private UUID userId;
 
     @Column(name = "hashed_token", nullable = false)
     private String hashedToken;

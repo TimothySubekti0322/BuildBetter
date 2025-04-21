@@ -82,7 +82,7 @@ public class AuthService {
         }
 
         // Verify OTP
-        if (!otpService.verifyOtp(user.getId().toString(), otp)) {
+        if (!otpService.verifyOtp(user.getId(), otp)) {
             throw new BadRequestException("Invalid OTP");
         }
 

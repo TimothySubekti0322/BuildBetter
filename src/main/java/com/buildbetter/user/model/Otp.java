@@ -27,7 +27,7 @@ public class Otp {
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private UUID userId;
 
     @Column(name = "hashed_otp", nullable = false)
     private String hashedOtp;

@@ -49,7 +49,7 @@ public class AuthController {
         ApiResponseMessageAndData<String> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.CREATED.value());
         response.setStatus(HttpStatus.CREATED.name());
-        response.setMessage("Verification code sent to" + request.getEmail());
+        response.setMessage("Verification code sent to " + request.getEmail());
         response.setData(message);
 
         return response;

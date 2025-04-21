@@ -1,23 +1,27 @@
 package com.buildbetter.plan.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.plan.dto.suggestions.AddSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionUrlRequest;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
+import com.buildbetter.plan.dto.suggestions.UpdateSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.UploadFloorPlans;
 import com.buildbetter.plan.dto.suggestions.UploadHouseFileRequest;
-import com.buildbetter.plan.service.SugesstionService;
+import com.buildbetter.plan.service.SuggestionService;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
 
@@ -30,7 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/v1/suggestions")
 @Slf4j
 public class SuggestionController {
-    private final SugesstionService suggestionService;
+    private final SuggestionService suggestionService;
 
     @PostMapping(path = "")
     public ApiResponseMessageOnly addSuggestions(@Valid @RequestBody AddSuggestionRequest request) {
@@ -89,18 +93,36 @@ public class SuggestionController {
     }
 
     @GetMapping("")
-    public ApiResponseWithData<?> getAll(@RequestParam(defaultValue = "false") boolean grouped) {
-        // if (grouped) {
-        // List<SuggestionResponse> groupedMaterials =
-        // materialService.getAllGroupedMaterials();
-        // return new ApiResponseWithData<>(HttpStatus.OK.value(), HttpStatus.OK.name(),
-        // groupedMaterials);
-        // } else {
-        // List<SuggestionResponse> materials = materialService.getAllMaterials();
-        // return new ApiResponseWithData<>(HttpStatus.OK.value(), HttpStatus.OK.name(),
-        // materials);
-        // }
+    public ApiResponseWithData<?> getAll() {
         List<SuggestionResponse> suggestions = suggestionService.getAllSuggestions();
         return new ApiResponseWithData<>(HttpStatus.OK.value(), HttpStatus.OK.name(), suggestions);
+    }
+
+    @PatchMapping("/{id}")
+    public ApiResponseMessageOnly putMethodName(@PathVariable UUID id, @RequestBody UpdateSuggestionRequest request) {
+        log.info("Controller : Update Suggestion");
+
+        suggestionService.updateSuggestion(id, request);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Suggestion deleted successfully");
+
+        return response;
+    }
+
+    @DeleteMapping(path = "/{id}")
+    public ApiResponseMessageOnly deleteSuggestion(@PathVariable UUID id) {
+        log.info("Controller : Delete suggestion");
+
+        suggestionService.deleteSuggestion(id);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Suggestion deleted successfully");
+
+        return response;
     }
 }

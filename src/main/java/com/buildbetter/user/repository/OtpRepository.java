@@ -10,5 +10,5 @@ import com.buildbetter.user.model.Otp;
 
 @Repository
 public interface OtpRepository extends JpaRepository<Otp, UUID> {
-    Optional<Otp> findByUserIdAndIsUsedFalse(String userId);
+    Optional<Otp> findByUserIdAndIsUsedFalse(UUID userId);
 }

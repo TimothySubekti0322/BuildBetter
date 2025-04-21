@@ -48,18 +48,6 @@ public class AddSuggestionRequest {
     @Size(min = 1, message = "Field 'budgetMax' must contain at least one value")
     private List<Integer> budgetMax;
 
-    // ── design assets ─────────────────
-    // @NotEmpty(message = "Field 'floorplans' is required")
-    // private MultipartFile[] floorplans;
-    // @NotBlank(message = "Field 'object' is required")
-    // private MultipartFile object;
-    // @NotNull(message = "Field 'houseImageFront' is required")
-    // private MultipartFile houseImageFront;
-    // @NotNull(message = "Field 'houseImageBack' is required")
-    // private MultipartFile houseImageBack;
-    // @NotNull(message = "Field 'houseImageSide' is required")
-    // private MultipartFile houseImageSide;
-
     // ── material IDs ─────────────────────────────────────────
     @NotNull(message = "Field 'materials0' is required")
     @Size(min = 1, message = "Field 'materials0' must contain at least one item")

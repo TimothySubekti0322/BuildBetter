@@ -49,7 +49,7 @@ public class ForgotPassword {
         String hashedToken = BCrypt.hashpw(token, BCrypt.gensalt());
 
         // Check if there is an existing token that is not used
-        ResetPasswordToken existingToken = resetPasswordRepository.findByUserIdAndIsUsedFalse(user.getId().toString())
+        ResetPasswordToken existingToken = resetPasswordRepository.findByUserIdAndIsUsedFalse(user.getId())
                 .orElse(null);
 
         if (existingToken != null) {
@@ -65,7 +65,7 @@ public class ForgotPassword {
             // Save Token
             ResetPasswordToken resetPasswordToken = new ResetPasswordToken();
             resetPasswordToken.setId(UUID.randomUUID());
-            resetPasswordToken.setUserId(user.getId().toString());
+            resetPasswordToken.setUserId(user.getId());
             resetPasswordToken.setHashedToken(hashedToken);
             resetPasswordToken.setCreatedAt(LocalDateTime.now());
             resetPasswordToken.setExpiredAt(LocalDateTime.now().plusHours(1));
@@ -111,7 +111,7 @@ public class ForgotPassword {
 
         // Check if OTP is correct
         ResetPasswordToken resetPasswordToken = resetPasswordRepository
-                .findByUserIdAndIsUsedFalse(user.getId().toString())
+                .findByUserIdAndIsUsedFalse(user.getId())
                 .orElseThrow(() -> new BadRequestException("No Token Found"));
 
         if (!BCrypt.checkpw(request.getToken(), resetPasswordToken.getHashedToken())) {
