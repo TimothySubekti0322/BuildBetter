@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # <- needed if you use AWS OIDC instead of static keys
+  id-token: write
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -35,10 +35,6 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-maven-
-
-      # ─── Unit / integration tests ──────────────────────────────────────────────
-      # - name: Build with Maven
-      #   run: mvn -B verify
 
       # ─── Login to ECR ──────────────────────────────────────────────────────────
       - name: Configure AWS credentials
@@ -87,44 +83,38 @@ jobs:
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           REDIS_HOST: ${{ secrets.REDIS_HOST }}
           REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          # Add Spring-specific variables here if needed
+          SPRING_DATASOURCE_URL: jdbc:postgresql://${{ secrets.RDS_ENDPOINT }}:5432/build_better
         run: |
-            ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-              set -e
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
+            set -e
 
-              ECR="$ECR_REGISTRY/$ECR_REPOSITORY"
-              TAG="$IMAGE_TAG"
+            ECR="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}"
+            TAG="${{ env.IMAGE_TAG }}"
 
-              echo ":: Pulling new image $ECR:$TAG"
-              docker pull $ECR:$TAG
+            echo ":: Pulling new image $ECR:$TAG"
+            docker pull $ECR:$TAG
 
-              echo ":: Ensure network 'internal-network' exists"
-              docker network inspect internal-network >/dev/null 2>&1 \
-                || docker network create internal-network
+            echo ":: Ensure network 'internal-network' exists"
+            docker network inspect internal-network >/dev/null 2>&1 \
+              || docker network create internal-network
 
-              echo ":: Stopping old container (if running)"
-              docker rm -f buildbetter-backend || true
+            echo ":: Stopping old container (if running)"
+            docker rm -f buildbetter-backend || true
 
-              echo ":: Starting new container"
-              docker run -d --name buildbetter-backend \
-                --restart unless-stopped \
-                --network internal-network \
-                -p 8080:8080 \
-                -e DB_URL="$DB_URL" \
-                -e DB_USERNAME="$DB_USERNAME" \
-                -e DB_PASSWORD="$DB_PASSWORD" \
-                -e JWT_SECRET="$JWT_SECRET" \
-                -e MAIL_PASSWORD="$MAIL_PASSWORD" \
-                -e REDIS_HOST="$REDIS_HOST" \
-                -e REDIS_PORT="$REDIS_PORT" \
-                $ECR:$TAG
+            echo ":: Starting new container"
+            docker run -d --name buildbetter-backend \
+              --restart unless-stopped \
+              --network internal-network \
+              -p 8080:8080 \
+              -e DB_URL="${{ env.DB_URL }}" \
+              -e DB_USERNAME="${{ env.DB_USERNAME }}" \
+              -e DB_PASSWORD="${{ env.DB_PASSWORD }}" \
+              -e JWT_SECRET="${{ env.JWT_SECRET }}" \
+              -e MAIL_PASSWORD="${{ env.MAIL_PASSWORD }}" \
+              -e REDIS_HOST="${{ env.REDIS_HOST }}" \
+              -e REDIS_PORT="${{ env.REDIS_PORT }}" \
+              $ECR:$TAG
 
-              echo ":: Deployed $ECR:$TAG"
-            EOF
-        env:
-          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          # the following 3 can be EC2‑level envs or SSM params you export
-          SPRING_DATASOURCE_URL: jdbc:postgresql://<rds‑endpoint>:5432/build_better
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.DB_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASSWORD }}
+            echo ":: Deployed $ECR:$TAG"
+          EOF
