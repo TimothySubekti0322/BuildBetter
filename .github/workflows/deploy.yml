@@ -103,6 +103,8 @@ jobs:
             ECR_PATH="$ECR_REG/$ECR_REPO"
             TAG="$IMG_TAG"
 
+            sudo su
+
             echo ":: Pulling new image \$ECR_PATH:\$TAG"
             docker pull \$ECR_PATH:\$TAG
 
