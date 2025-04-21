@@ -85,14 +85,26 @@ jobs:
           # Add Spring-specific variables here if needed
           SPRING_DATASOURCE_URL: jdbc:postgresql://${{ secrets.RDS_ENDPOINT }}:5432/build_better
         run: |
+
+          export ECR_REG="${{ env.ECR_REGISTRY }}"
+          export ECR_REPO="${{ env.ECR_REPOSITORY }}"
+          export IMG_TAG="${{ env.IMAGE_TAG }}"
+          export DB_URL="${{ secrets.DB_URL }}"
+          export DB_USERNAME="${{ secrets.DB_USERNAME }}"
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+          export MAIL_PASSWORD="${{ secrets.MAIL_PASSWORD }}"
+          export REDIS_HOST="${{ secrets.REDIS_HOST }}"
+          export REDIS_PORT="${{ secrets.REDIS_PORT }}"
+
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
             set -e
 
-            ECR="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}"
-            TAG="${{ env.IMAGE_TAG }}"
+            ECR_PATH="$ECR_REG/$ECR_REPO"
+            TAG="$IMG_TAG"
 
-            echo ":: Pulling new image $ECR:$TAG"
-            docker pull $ECR:$TAG
+            echo ":: Pulling new image \$ECR_PATH:\$TAG"
+            docker pull \$ECR_PATH:\$TAG
 
             echo ":: Ensure network 'internal-network' exists"
             docker network inspect internal-network >/dev/null 2>&1 \
@@ -102,7 +114,7 @@ jobs:
             docker rm -f buildbetter-backend || true
 
             echo ":: Starting new container"
-            docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL="${{ env.DB_URL }}" -e DB_USERNAME="${{ env.DB_USERNAME }}" -e DB_PASSWORD="${{ env.DB_PASSWORD }}" -e JWT_SECRET="${{ env.JWT_SECRET }}" -e MAIL_PASSWORD="${{ env.MAIL_PASSWORD }}" -e REDIS_HOST="${{ env.REDIS_HOST }}" -e REDIS_PORT="${{ env.REDIS_PORT }}" $ECR:$TAG
+            docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
 
-            echo ":: Deployed $ECR:$TAG"
+            echo ":: Deployed \$ECR_PATH:\$TAG"
           EOF
