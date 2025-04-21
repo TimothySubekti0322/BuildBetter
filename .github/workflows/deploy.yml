@@ -110,7 +110,7 @@ jobs:
           # Copy script to remote host and execute
           chmod +x deploy.sh
           scp -o StrictHostKeyChecking=no deploy.sh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/deploy.sh
-          ssh -o StrictHostKeyChecking=no ${{ secrets.
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "bash ~/deploy.sh && rm ~/deploy.sh"
 
       # - name: Deploy on EC2
       #   env:
