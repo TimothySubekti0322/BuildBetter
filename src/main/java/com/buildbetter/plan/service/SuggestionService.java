@@ -2,9 +2,11 @@ package com.buildbetter.plan.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -17,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.buildbetter.plan.constant.HouseFileType;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionUrlRequest;
+import com.buildbetter.plan.dto.suggestions.GenerateSuggestionRequest;
+import com.buildbetter.plan.dto.suggestions.GenerateSuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.UpdateSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.UploadFloorPlans;
@@ -233,5 +237,67 @@ public class SuggestionService {
         }
 
         suggestionRepository.deleteById(id);
+    }
+
+    public List<GenerateSuggestionResponse> generateSuggestion(GenerateSuggestionRequest req) {
+
+        String style = req.getStyle().trim();
+        int landArea = req.getLandArea();
+        int floor = req.getFloor();
+
+        /* ── single DB hit ─────────────────────────────────────── */
+        List<Suggestion> pool = suggestionRepository.findByStyleIgnoreCase(style);
+        if (pool.isEmpty())
+            return List.of();
+
+        // ── Rule 1 ─ exact match ───────────────────────────────────────
+        List<Suggestion> selected = pool.stream()
+                .filter(s -> s.getLandArea() == landArea && s.getFloor() == floor)
+                .toList();
+
+        // ── Rule 2 ─ same floor, closest smaller landArea ──────────────
+        if (selected.isEmpty()) {
+            Optional<Suggestion> opt = pool.stream()
+                    .filter(s -> s.getFloor() == floor && s.getLandArea() < landArea)
+                    .max(Comparator.comparingInt(Suggestion::getLandArea));
+
+            if (opt.isPresent()) {
+                selected = List.of(opt.get());
+            }
+        }
+
+        // ── Rule 3 ─ same landArea, different floor ────────────────────
+        if (selected.isEmpty()) {
+            selected = pool.stream()
+                    .filter(s -> s.getLandArea() == landArea && s.getFloor() != floor)
+                    .toList();
+        }
+
+        // ── Rule 4 ─ smaller landArea, different floor ─────────────────
+        if (selected.isEmpty()) {
+            Optional<Suggestion> opt = pool.stream()
+                    .filter(s -> s.getLandArea() < landArea && s.getFloor() != floor)
+                    .max(Comparator.comparingInt(Suggestion::getLandArea));
+
+            if (opt.isPresent()) {
+                selected = List.of(opt.get());
+            }
+        }
+
+        // ── nothing matched → bail out before hitting materials table ─
+        if (selected.isEmpty()) {
+            return List.of();
+        }
+
+        /* ── bulk-load materials only once ─────────────────────── */
+        Set<UUID> matIds = SuggestionUtils.collectMaterialIds(selected);
+        Map<UUID, Material> mats = materialRepository.findAllById(matIds)
+                .stream()
+                .collect(Collectors.toMap(Material::getId, m -> m));
+
+        /* ── map to DTOs via util ─────────────────────────────── */
+        return selected.stream()
+                .map(s -> SuggestionUtils.toGenerateSuggestionResponseDto(s, mats))
+                .toList();
     }
 }
