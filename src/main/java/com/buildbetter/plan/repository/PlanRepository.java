@@ -1,74 +1,39 @@
-// package com.buildbetter.plan.repository;
+package com.buildbetter.plan.repository;
 
-// import java.util.List;
-// import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-// import org.springframework.data.jpa.repository.JpaRepository;
-// import org.springframework.data.jpa.repository.Query;
-// import org.springframework.data.repository.query.Param;
-// import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.stereotype.Repository;
 
-// import com.buildbetter.plan.model.Plan;
-// import com.buildbetter.plan.model.Suggestion;
+import com.buildbetter.plan.model.Plan;
+import com.buildbetter.plan.model.Suggestion;
 
-// @Repository
-// public interface PlanRepository extends JpaRepository<Plan, UUID> {
+@Repository
+public interface PlanRepository extends JpaRepository<Plan, UUID> {
 
-// /* ───────────── derived queries (no custom SQL) ───────────── */
+    /** All plans owned by a single user (ordered newest-first). */
+    List<Plan> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-// List<Plan> findByUserId(UUID userId);
+    /** All plans in a given city / province. */
+    List<Plan> findByProvinceAndCity(String province, String city);
 
-// List<Plan> findBySuggestion(Suggestion suggestion);
+    @Query("""
+            select p.id, p.createdAt
+              from Plan p
+             where p.userId = :userId
+             order by p.createdAt desc
+            """)
+    List<Object[]> findIdsAndDatesByUserId(UUID userId);
 
-// List<Plan> findBySuggestionId(UUID suggestionId);
+    @Query("""
+            select s
+            from Plan p
+            join p.suggestion s
+            where p.id = :planId
+            """)
+    Optional<Suggestion> findSuggestionByPlanId(UUID planId);
 
-// List<Plan> findByProvinceAndCityAndDistrict(String province, String city,
-// String district);
-
-// List<Plan> findByStyle(String style);
-
-// List<Plan> findByFloor(Integer floor);
-
-// List<Plan> findByRooms(Integer rooms);
-
-// List<Plan> findByLengthAndWidth(Integer length, Integer width);
-
-// List<Plan> findByFloodProneTrue();
-
-// List<Plan> findByLandform(String landform);
-
-// List<Plan> findByEntranceDirection(String entranceDirection);
-
-// /* land‑area filter (JPQL is fine here) */
-// @Query("SELECT p FROM Plan p WHERE p.length * p.width >= :minArea")
-// List<Plan> findByLandAreaGreaterThanEqual(@Param("minArea") Integer minArea);
-
-// /* ───────────── native query for array lookup ───────────── */
-
-// /**
-// * Return all plans whose linked Suggestion contains the given material UUID
-// * in <code>material_0</code>, <code>material_1</code> or
-// * <code>material_2</code>.
-// *
-// * Uses PostgreSQL’s <code>ANY(uuid[])</code> operator, so we must mark it
-// * <code>nativeQuery = true</code>.
-// */
-// @Query(value = """
-// SELECT p.*
-// FROM plans p
-// WHERE p.suggestion_id IN (
-// SELECT s.id
-// FROM suggestions s
-// WHERE :materialId = ANY(s.material_0)
-// OR :materialId = ANY(s.material_1)
-// OR :materialId = ANY(s.material_2)
-// )
-// """, nativeQuery = true)
-// List<Plan> findByMaterialId(@Param("materialId") UUID materialId);
-
-// /* ───────────── misc helpers ───────────── */
-
-// long countByUserId(UUID userId);
-
-// boolean existsByUserId(UUID userId);
-// }
+}

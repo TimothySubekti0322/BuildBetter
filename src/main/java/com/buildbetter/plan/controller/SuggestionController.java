@@ -17,12 +17,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.plan.dto.suggestions.AddSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionUrlRequest;
-import com.buildbetter.plan.dto.suggestions.GenerateSuggestionRequest;
-import com.buildbetter.plan.dto.suggestions.GenerateSuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.UpdateSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.UploadFloorPlans;
 import com.buildbetter.plan.dto.suggestions.UploadHouseFileRequest;
+import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionRequest;
+import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionResponse;
 import com.buildbetter.plan.service.SuggestionService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
@@ -102,7 +102,7 @@ public class SuggestionController {
     }
 
     @PatchMapping("/{id}")
-    public ApiResponseMessageOnly putMethodName(@PathVariable UUID id, @RequestBody UpdateSuggestionRequest request) {
+    public ApiResponseMessageOnly updateSuggestion(@PathVariable UUID id, @RequestBody UpdateSuggestionRequest request) {
         log.info("Controller : Update Suggestion");
 
         suggestionService.updateSuggestion(id, request);
@@ -130,10 +130,10 @@ public class SuggestionController {
     }
 
     @PostMapping(path = "/generate")
-    public ApiResponseMessageAndData<List<GenerateSuggestionResponse>> generateSuggestions(
+    public ApiResponseMessageAndData<GenerateSuggestionResponse> generateSuggestions(
             @Valid @RequestBody GenerateSuggestionRequest request) {
-        List<GenerateSuggestionResponse> result = suggestionService.generateSuggestion(request);
-        ApiResponseMessageAndData<List<GenerateSuggestionResponse>> response = new ApiResponseMessageAndData<>();
+        GenerateSuggestionResponse result = suggestionService.generateSuggestion(request);
+        ApiResponseMessageAndData<GenerateSuggestionResponse> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Suggestions generated successfully");

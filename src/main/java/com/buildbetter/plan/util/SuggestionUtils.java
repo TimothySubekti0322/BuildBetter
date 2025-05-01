@@ -14,10 +14,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.buildbetter.plan.constant.HouseMaterial;
-import com.buildbetter.plan.dto.materials.MaterialResponse;
-import com.buildbetter.plan.dto.suggestions.GenerateSuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
+import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionRequest;
 import com.buildbetter.plan.model.Material;
+import com.buildbetter.plan.model.Plan;
 import com.buildbetter.plan.model.Suggestion;
 
 import lombok.NoArgsConstructor;
@@ -51,7 +51,7 @@ public class SuggestionUtils {
                 .build();
     }
 
-    public static Map<String, Map<String, MaterialResponse>> groupByCatAndSub(List<UUID> ids,
+    public static Map<String, Map<String, Material>> groupByCatAndSub(List<UUID> ids,
             Map<UUID, Material> materialById) {
 
         if (ids == null || ids.isEmpty())
@@ -62,16 +62,16 @@ public class SuggestionUtils {
                 .filter(Objects::nonNull)
                 .map(SuggestionUtils::toDto) // Corrected: Using class name for static method
                 .collect(Collectors.groupingBy(
-                        MaterialResponse::getCategory, // first level
+                        Material::getCategory, // first level
                         LinkedHashMap::new,
-                        Collectors.toMap(MaterialResponse::getSubCategory,
+                        Collectors.toMap(Material::getSubCategory,
                                 Function.identity(),
                                 (a, b) -> a, // keep first if duplicate
                                 LinkedHashMap::new)));
     }
 
-    public static MaterialResponse toDto(Material m) {
-        return MaterialResponse.builder()
+    public static Material toDto(Material m) {
+        return Material.builder()
                 .id(m.getId())
                 .name(m.getName())
                 .category(m.getCategory())
@@ -122,12 +122,11 @@ public class SuggestionUtils {
         return tree;
     }
 
-
-    public static GenerateSuggestionResponse toGenerateSuggestionResponseDto(
+    public static SuggestionResponse toArrayOfSuggestionResponses(
             Suggestion s,
             Map<UUID, Material> materialMap) {
 
-        return GenerateSuggestionResponse.builder()
+        return SuggestionResponse.builder()
                 .id(s.getId())
                 .houseNumber(s.getHouseNumber())
 
@@ -159,65 +158,40 @@ public class SuggestionUtils {
                 .build();
     }
 
-    // public static GenerateSuggestionResponse
-    // toGenerateSuggestionResponseDto(Suggestion s,
-    // Map<UUID, Material> materialMap) {
-    // return GenerateSuggestionResponse.builder()
-    // .id(s.getId())
-    // .houseNumber(s.getHouseNumber())
-    // .landArea(s.getLandArea())
-    // .buildingArea(s.getBuildingArea())
-    // .style(s.getStyle())
-    // .floor(s.getFloor())
-    // .rooms(s.getRooms())
-    // .buildingHeight(s.getBuildingHeight())
-    // .designer(s.getDesigner())
-    // .defaultBudget(s.getDefaultBudget())
-    // .budgetMin(s.getBudgetMin())
-    // .budgetMax(s.getBudgetMax())
-    // .floorplans(s.getFloorplans())
-    // .object(s.getObject())
-    // .houseImageFront(s.getHouseImageFront())
-    // .houseImageBack(s.getHouseImageBack())
-    // .houseImageSide(s.getHouseImageSide())
-    // .materials0(resolveMaterials(s.getMaterials0(), materialMap))
-    // .materials1(resolveMaterials(s.getMaterials1(), materialMap))
-    // .materials2(resolveMaterials(s.getMaterials2(), materialMap))
-    // .build();
-    // }
-
-    // public static Map<String, Map<String, MaterialResponse>>
-    // resolveMaterials(List<UUID> ids,
-    // Map<UUID, Material> materialMap) {
-    // if (ids == null || ids.isEmpty())
-    // return Collections.emptyMap();
-
-    // Map<String, Map<String, MaterialResponse>> result = new HashMap<>();
-
-    // for (UUID id : ids) {
-    // Material m = materialMap.get(id);
-    // if (m == null)
-    // continue;
-
-    // String cat = m.getCategory();
-    // String sub = m.getSubCategory();
-
-    // result.computeIfAbsent(cat, k -> new HashMap<>());
-    // if (sub != null && !sub.isBlank()) {
-    // result.get(cat).put(sub, toMaterialResponseDto(m));
-    // }
-    // }
-
-    // return result;
-    // }
-
-    // public static MaterialResponse toMaterialResponseDto(Material m) {
-    // return MaterialResponse.builder()
-    // .id(m.getId())
-    // .name(m.getName())
-    // .category(m.getCategory())
-    // .subCategory(m.getSubCategory())
-    // .image(m.getImage())
-    // .build();
-    // }
+    public static GenerateSuggestionRequest planToGenerateSuggestionRequest(Plan plan,
+            SuggestionResponse suggestion) {
+        return new GenerateSuggestionRequest(plan.getProvince(), plan.getCity(),
+                plan.getLandform(), plan.getLandArea(), plan.getEntranceDirection(),
+                suggestion.getStyle(), suggestion.getFloor(), suggestion.getRooms());
+    }
 }
+// SuggestionResponse[] suggestions = new SuggestionResponse[s.length];
+
+// for (int i = 0; i < s.length; i++) {
+
+// suggestions[i] = SuggestionResponse.builder()
+// .id(s[i].getId())
+// .houseNumber(s[i].getHouseNumber())
+// .landArea(s[i].getLandArea())
+// .buildingArea(s[i].getBuildingArea())
+// .style(s[i].getStyle())
+// .floor(s[i].getFloor())
+// .rooms(s[i].getRooms())
+// .buildingHeight(s[i].getBuildingHeight())
+// .designer(s[i].getDesigner())
+// .defaultBudget(s[i].getDefaultBudget())
+// .budgetMin(s[i].getBudgetMin())
+// .budgetMax(s[i].getBudgetMax())
+// .floorplans(s[i].getFloorplans())
+// .object(s[i].getObject())
+// .houseImageFront(s[i].getHouseImageFront())
+// .houseImageBack(s[i].getHouseImageBack())
+// .houseImageSide(s[i].getHouseImageSide())
+// .materials0(buildMaterialTree(s[i].getMaterials0(), materialMap))
+// .materials1(buildMaterialTree(s[i].getMaterials1(), materialMap))
+// .materials2(buildMaterialTree(s[i].getMaterials2(), materialMap))
+// .build();
+// }
+
+// return suggestions;
+// }

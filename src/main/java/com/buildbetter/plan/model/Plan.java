@@ -1,7 +1,9 @@
 package com.buildbetter.plan.model;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -27,62 +29,47 @@ import lombok.NoArgsConstructor;
 @Table(name = "plans")
 public class Plan {
 
-@Id
-@GeneratedValue(strategy = GenerationType.UUID)
-@Column(name = "id", columnDefinition = "uuid", updatable = false, nullable =
-false)
-private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
 
-@Column(name = "user_id", columnDefinition = "uuid", nullable = false)
-private UUID userId;
+    @Column(name = "user_id", columnDefinition = "uuid", nullable = false)
+    private UUID userId;
 
-/* ──────────── location info ──────────── */
-@Column(name = "province", nullable = false)
-private String province;
-@Column(name = "city", nullable = false)
-private String city;
-// @Column(name = "district", nullable = false)
-// private String district;
+    /* ──────────── location info ──────────── */
+    @Column(name = "province", nullable = false)
+    private String province;
+    @Column(name = "city", nullable = false)
+    private String city;
 
-/* ──────────── land details ──────────── */
-@Column(name = "land_form", nullable = false)
-private String landform;
+    /* ──────────── land details ──────────── */
+    @Column(name = "land_form", nullable = false)
+    private String landform;
 
-// @Column(name = "length", nullable = false)
-// private Integer length;
+    @Column(name = "land_area", nullable = false)
+    private Integer landArea;
 
-// @Column(name = "width", nullable = false)
-// private Integer width;
+    @Column(name = "entrance_direction", nullable = false)
+    private String entranceDirection;
 
-@Column(name= "land_area", nullable = false)
-private Integer landArea;
+    /* ──────────── building spec ─── */
+    @Column(name = "style", nullable = false)
+    private String style;
 
-// @Column(name = "land_condition", nullable = false)
-// private String landCondition;
+    @Column(name = "floor", nullable = false)
+    private Integer floor;
 
-@Column(name = "entrance_direction", nullable = false)
-private String entranceDirection;
+    @Column(name = "rooms", nullable = false)
+    private Integer rooms;
 
-// @Column(name = "ground_condition", nullable = false)
-// private String groundCondition;
+    /* ──────────── suggestion ──────────── */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JdbcTypeCode(SqlTypes.UUID)
+    @JoinColumn(name = "suggestion_id", referencedColumnName = "id", nullable = false)
+    private Suggestion suggestion;
 
-// @Column(name = "flood_prone", columnDefinition = "boolean")
-// private Boolean floodProne;
-
-/* ──────────── building spec ─── */
-@Column(name = "style", nullable = false)
-private String style;
-
-@Column(name = "floor", nullable = false)
-private Integer floor;
-
-@Column(name = "rooms", nullable = false)
-private Integer rooms;
-
-/* ──────────── suggestion ──────────── */
-@ManyToOne(fetch = FetchType.LAZY)
-@JdbcTypeCode(SqlTypes.UUID)
-@JoinColumn(name = "suggestion_id", referencedColumnName = "id", nullable =
-false)
-private Suggestion suggestion;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMPTZ DEFAULT now()")
+    private LocalDateTime createdAt;
 }

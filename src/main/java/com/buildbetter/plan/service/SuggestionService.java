@@ -19,12 +19,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.buildbetter.plan.constant.HouseFileType;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.AddSuggestionUrlRequest;
-import com.buildbetter.plan.dto.suggestions.GenerateSuggestionRequest;
-import com.buildbetter.plan.dto.suggestions.GenerateSuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.UpdateSuggestionRequest;
 import com.buildbetter.plan.dto.suggestions.UploadFloorPlans;
 import com.buildbetter.plan.dto.suggestions.UploadHouseFileRequest;
+import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionRequest;
+import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionResponse;
 import com.buildbetter.plan.model.Material;
 import com.buildbetter.plan.model.Suggestion;
 import com.buildbetter.plan.repository.MaterialRepository;
@@ -239,7 +239,11 @@ public class SuggestionService {
         suggestionRepository.deleteById(id);
     }
 
-    public List<GenerateSuggestionResponse> generateSuggestion(GenerateSuggestionRequest req) {
+    public GenerateSuggestionResponse generateSuggestion(GenerateSuggestionRequest req) {
+
+        GenerateSuggestionResponse response = new GenerateSuggestionResponse();
+        response.setUserInput(req);
+        response.setSuggestions(new SuggestionResponse[0]);
 
         String style = req.getStyle().trim();
         int landArea = req.getLandArea();
@@ -248,7 +252,7 @@ public class SuggestionService {
         /* ── single DB hit ─────────────────────────────────────── */
         List<Suggestion> pool = suggestionRepository.findByStyleIgnoreCase(style);
         if (pool.isEmpty())
-            return List.of();
+            return response;
 
         // ── Rule 1 ─ exact match ───────────────────────────────────────
         List<Suggestion> selected = pool.stream()
@@ -286,7 +290,7 @@ public class SuggestionService {
 
         // ── nothing matched → bail out before hitting materials table ─
         if (selected.isEmpty()) {
-            return List.of();
+            return response;
         }
 
         /* ── bulk-load materials only once ─────────────────────── */
@@ -295,9 +299,13 @@ public class SuggestionService {
                 .stream()
                 .collect(Collectors.toMap(Material::getId, m -> m));
 
-        /* ── map to DTOs via util ─────────────────────────────── */
-        return selected.stream()
-                .map(s -> SuggestionUtils.toGenerateSuggestionResponseDto(s, mats))
-                .toList();
+        /* map to Array of Suggestion */
+        SuggestionResponse[] suggestions = selected.stream()
+                .map(s -> SuggestionUtils.toArrayOfSuggestionResponses(s, mats))
+                .toArray(SuggestionResponse[]::new);
+
+        response.setSuggestions(suggestions);
+
+        return response;
     }
 }
