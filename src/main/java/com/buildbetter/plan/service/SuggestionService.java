@@ -47,7 +47,8 @@ public class SuggestionService {
     private final SuggestionRepository suggestionRepository;
     private final S3Service s3Service;
 
-    public void addSugesstion(AddSuggestionRequest request) {
+    public UUID addSugesstion(AddSuggestionRequest request) {
+        log.info("Suggestion Service : addSugesstion");
 
         Suggestion suggestion = new Suggestion();
 
@@ -66,12 +67,17 @@ public class SuggestionService {
         suggestion.setMaterials1(request.getMaterials1());
         suggestion.setMaterials2(request.getMaterials2());
 
-        suggestionRepository.save(suggestion);
+        Suggestion saved = suggestionRepository.save(suggestion);
+
+        return saved.getId();
     }
 
     public void uploadFloorPlans(UploadFloorPlans request) {
+        log.info("Suggestion Service : uploadFloorPlans");
+
         Suggestion suggestion = suggestionRepository.findById(request.getId())
                 .orElseThrow(() -> new NotFoundException("Suggestion not found"));
+
         String folder = S3Folder.SUGGESTIONS + suggestion.getHouseNumber() + "/";
 
         List<String> floorPlansList = suggestion.getFloorplans() != null ? suggestion.getFloorplans()
@@ -82,61 +88,82 @@ public class SuggestionService {
             if (floorplan.isEmpty())
                 continue;
 
+            log.info("Suggestion Service : uploadFloorPlans - Upload File " + floorplan.getOriginalFilename()
+                    + " to S3");
             String imageUrl = s3Service.uploadFile(floorplan, folder);
             floorPlansList.add(imageUrl);
         }
 
         if (suggestion.getFloorplans() != null) {
             for (String floorPlan : suggestion.getFloorplans()) {
+                log.info("Suggestion Service : uploadFloorPlans - Delete old floorplan file " + floorPlan + " from S3");
                 s3Service.deleteFile(floorPlan);
             }
         }
 
         suggestion.setFloorplans(floorPlansList);
 
+        log.info("Suggestion Service : uploadFloorPlans - Save updated suggestion to DB");
         suggestionRepository.save(suggestion);
     }
 
     public void uploadHouseFile(UploadHouseFileRequest request) {
+        log.info("Suggestion Service : uploadHouseFile");
+
         Suggestion suggestion = suggestionRepository.findById(request.getId())
                 .orElseThrow(() -> new NotFoundException("Suggestion not found"));
 
         String folder = S3Folder.SUGGESTIONS + suggestion.getHouseNumber() + "/";
 
         // Upload House Image Object
+        log.info("Suggestion Service : uploadHouseFile - Upload File " + request.getFile().getOriginalFilename()
+                + " to S3");
         String houseImageObjectUrl = s3Service.uploadFile(request.getFile(), folder);
 
+        log.info("Suggestion Service : uploadHouseFile - Convert HouseFileType into enum");
         HouseFileType houseFileType = HouseFileType.fromValueIgnoreCase(request.getType());
         // Set the house image based on the type
         if (houseFileType == HouseFileType.HOUSE_IMAGE_FRONT) {
             if (suggestion.getHouseImageFront() != null) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
+                        + suggestion.getHouseImageFront() + " from S3");
                 s3Service.deleteFile(suggestion.getHouseImageFront());
             }
             suggestion.setHouseImageFront(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_BACK) {
             if (suggestion.getHouseImageBack() != null) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
+                        + suggestion.getHouseImageFront() + " from S3");
                 s3Service.deleteFile(suggestion.getHouseImageBack());
             }
             suggestion.setHouseImageBack(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_SIDE) {
             if (suggestion.getHouseImageSide() != null) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
+                        + suggestion.getHouseImageFront() + " from S3");
                 s3Service.deleteFile(suggestion.getHouseImageSide());
             }
             suggestion.setHouseImageSide(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_OBJECT) {
             if (suggestion.getObject() != null) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
+                        + suggestion.getHouseImageFront() + " from S3");
                 s3Service.deleteFile(suggestion.getObject());
             }
             suggestion.setObject(houseImageObjectUrl);
         }
 
+        log.info("Suggestion Service : uploadHouseFile - Save updated suggestion to DB");
         suggestionRepository.save(suggestion);
     }
 
     public void addSugesstionUrl(AddSuggestionUrlRequest request) {
+        log.info("Suggestion Service : addSugesstionUrl");
+
         Suggestion suggestion = suggestionRepository.findById(request.getId())
                 .orElseThrow(() -> new NotFoundException("Suggestion not found"));
 
+        log.info("Suggestion Service : addSuggestionUrl - Convert HouseFileType into enum");
         HouseFileType houseFileType = HouseFileType.fromValueIgnoreCase(request.getType());
         // Set the house image based on the type
         if (houseFileType == HouseFileType.HOUSE_IMAGE_FRONT) {
@@ -149,14 +176,17 @@ public class SuggestionService {
             suggestion.setObject(request.getUrl());
         }
 
+        log.info("Suggestion Service : addSugesstionUrl - Save updated suggestion to DB");
         suggestionRepository.save(suggestion);
     }
 
     public List<SuggestionResponse> getAllSuggestions() {
+        log.info("Suggestion Service : getAllSuggestions");
 
         List<Suggestion> suggestions = suggestionRepository.findAll();
 
-        // fetch ALL material ids only once (O(1) DB call)
+        // fetch ALL material ids
+        log.info("Suggestion Service : getAllSuggestions - Fetch all materials from DB");
         Set<UUID> allIds = suggestions.stream()
                 .flatMap(s -> Stream.of(s.getMaterials0(),
                         s.getMaterials1(),
@@ -165,19 +195,47 @@ public class SuggestionService {
                 .flatMap(Collection::stream)
                 .collect(Collectors.toSet());
 
+        log.info("Suggestion Service : getAllSuggestions - Fetch all materials from DB in Map<UUID, Material> format");
         Map<UUID, Material> materialById = materialRepository.findAllById(allIds) // one query
                 .stream()
                 .collect(Collectors.toMap(Material::getId,
                         Function.identity()));
 
-        // map every suggestion
+        log.info("Suggestion Service : getAllSuggestions - Map every suggestion to SuggestionResponse");
         return suggestions.stream()
                 .map(s -> SuggestionUtils.toGetSuggestionResponse(s, materialById))
                 .toList();
     }
 
+    public SuggestionResponse getSuggestionById(UUID id) {
+        log.info("Suggestion Service : getSuggestionById");
+
+        Suggestion suggestion = suggestionRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Suggestion not found"));
+
+        // fetch ALL material ids
+        log.info("Suggestion Service : getSuggestionById - Fetch all materials from DB");
+        Set<UUID> allIds = Stream.of(suggestion.getMaterials0(),
+                suggestion.getMaterials1(),
+                suggestion.getMaterials2())
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toSet());
+
+        log.info("Suggestion Service : getSuggestionById - Fetch all materials from DB in Map<UUID, Material> format");
+        Map<UUID, Material> materialById = materialRepository.findAllById(allIds) // one query
+                .stream()
+                .collect(Collectors.toMap(Material::getId,
+                        Function.identity()));
+
+        log.info("Suggestion Service : getSuggestionById - Map suggestion to SuggestionResponse");
+        return SuggestionUtils.toGetSuggestionResponse(suggestion, materialById);
+    }
+
     @Transactional
     public void updateSuggestion(UUID id, UpdateSuggestionRequest request) {
+        log.info("Suggestion Service : updateSuggestion");
+
         Suggestion existingSuggestion = suggestionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Suggestion not found"));
 
@@ -208,17 +266,22 @@ public class SuggestionService {
         existingSuggestion.setMaterials2(
                 request.getMaterials2() != null ? request.getMaterials2() : existingSuggestion.getMaterials2());
 
+        log.info("Suggestion Service : updateSuggestion - Save updated suggestion to DB");
         suggestionRepository.save(existingSuggestion);
     }
 
     public void deleteSuggestion(UUID id) {
+        log.info("Suggestion Service : deleteSuggestion");
+
         Suggestion suggestion = suggestionRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Suggestion not found"));
 
         // Delete all files from S3 bucket
+        log.info("Suggestion Service : deleteSuggestion - Delete all files from S3 bucket");
         List<String> floorPlans = suggestion.getFloorplans();
         if (floorPlans != null) {
             for (String floorPlan : floorPlans) {
+                log.info("Suggestion Service : deleteSuggestion - Delete floorplan file (" + floorPlan + ") from S3");
                 s3Service.deleteFile(floorPlan);
             }
         }
@@ -236,10 +299,12 @@ public class SuggestionService {
             s3Service.deleteFile(suggestion.getObject());
         }
 
+        log.info("Suggestion Service : deleteSuggestion - Delete suggestion from DB");
         suggestionRepository.deleteById(id);
     }
 
     public GenerateSuggestionResponse generateSuggestion(GenerateSuggestionRequest req) {
+        log.info("Suggestion Service : generateSuggestion");
 
         GenerateSuggestionResponse response = new GenerateSuggestionResponse();
         response.setUserInput(req);
@@ -249,17 +314,20 @@ public class SuggestionService {
         int landArea = req.getLandArea();
         int floor = req.getFloor();
 
-        /* ── single DB hit ─────────────────────────────────────── */
+        /* Fetch all suggestions with EXACT style */
+        log.info("Suggestion Service : generateSuggestion - Fetch all suggestions by style from DB");
         List<Suggestion> pool = suggestionRepository.findByStyleIgnoreCase(style);
         if (pool.isEmpty())
             return response;
 
         // ── Rule 1 ─ exact match ───────────────────────────────────────
+        log.info("Suggestion Service : generateSuggestion - 1st Rule (exact Match)");
         List<Suggestion> selected = pool.stream()
                 .filter(s -> s.getLandArea() == landArea && s.getFloor() == floor)
                 .toList();
 
         // ── Rule 2 ─ same floor, closest smaller landArea ──────────────
+        log.info("Suggestion Service : generateSuggestion - 2nd Rule (same floor, closest smaller landArea)");
         if (selected.isEmpty()) {
             Optional<Suggestion> opt = pool.stream()
                     .filter(s -> s.getFloor() == floor && s.getLandArea() < landArea)
@@ -271,6 +339,7 @@ public class SuggestionService {
         }
 
         // ── Rule 3 ─ same landArea, different floor ────────────────────
+        log.info("Suggestion Service : generateSuggestion - 3rd Rule (same LandArea, different floor)");
         if (selected.isEmpty()) {
             selected = pool.stream()
                     .filter(s -> s.getLandArea() == landArea && s.getFloor() != floor)
@@ -278,6 +347,7 @@ public class SuggestionService {
         }
 
         // ── Rule 4 ─ smaller landArea, different floor ─────────────────
+        log.info("Suggestion Service : generateSuggestion - 4th Rule (smaller landArea, different floor)");
         if (selected.isEmpty()) {
             Optional<Suggestion> opt = pool.stream()
                     .filter(s -> s.getLandArea() < landArea && s.getFloor() != floor)
@@ -294,12 +364,16 @@ public class SuggestionService {
         }
 
         /* ── bulk-load materials only once ─────────────────────── */
+        log.info(
+                "Suggestion Service : generateSuggestion - Collect all material ids from selected suggestions (SuggestionUtils.collectMaterialIds)");
         Set<UUID> matIds = SuggestionUtils.collectMaterialIds(selected);
         Map<UUID, Material> mats = materialRepository.findAllById(matIds)
                 .stream()
                 .collect(Collectors.toMap(Material::getId, m -> m));
 
         /* map to Array of Suggestion */
+        log.info(
+                "Suggestion Service : generateSuggestion - Map selected suggestions to SuggestionResponse (SuggestionUtils.toArrayOfSuggestionResponses)");
         SuggestionResponse[] suggestions = selected.stream()
                 .map(s -> SuggestionUtils.toArrayOfSuggestionResponses(s, mats))
                 .toArray(SuggestionResponse[]::new);

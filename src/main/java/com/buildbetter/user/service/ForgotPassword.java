@@ -31,6 +31,8 @@ public class ForgotPassword {
 
     // Forgot Password
     public String forgotPassword(String email) {
+        log.info("Forgot Password Service : forgotPassword");
+
         User user = userRepository.findByEmail(email).orElseThrow(
                 () -> new BadRequestException("User not registered"));
 
@@ -38,6 +40,7 @@ public class ForgotPassword {
             throw new BadRequestException("User not verified");
         }
 
+        log.info("Forgot Password Service : Checking if user is rate limited");
         if (!rateLimiterService.canSendOtp(email, RateLimiterService.PREFIX_FORGOT_PASSWORD_RATE_LIMIT)) {
             throw new BadRequestException("You have reached the maximum number of attempts. Please try again later.");
         }
@@ -46,6 +49,7 @@ public class ForgotPassword {
         String token = UUID.randomUUID().toString();
 
         // Hash Token
+        log.info("Forgot Password Service : Hashing token");
         String hashedToken = BCrypt.hashpw(token, BCrypt.gensalt());
 
         // Check if there is an existing token that is not used
@@ -58,6 +62,7 @@ public class ForgotPassword {
             existingToken.setCreatedAt(LocalDateTime.now());
             existingToken.setExpiredAt(LocalDateTime.now().plusHours(1));
 
+            log.info("Forgot Password Service : Update existing token in DB");
             resetPasswordRepository.save(existingToken);
 
         } else {
@@ -71,13 +76,16 @@ public class ForgotPassword {
             resetPasswordToken.setExpiredAt(LocalDateTime.now().plusHours(1));
             resetPasswordToken.setIsUsed(false);
 
+            log.info("Forgot Password Service : Saving new token to DB");
             resetPasswordRepository.save(resetPasswordToken);
         }
 
         // Send email
+        log.info("Forgot Password Service : Sending Change Password link to email");
         sendChangePasswordLink(email, token);
 
         // Update send email attempts
+        log.info("Forgot Password Service : Updating send email attempts");
         rateLimiterService.addOtpAttempt(email, RateLimiterService.PREFIX_FORGOT_PASSWORD_RATE_LIMIT);
 
         return "Change Password link sent to email";
@@ -85,12 +93,17 @@ public class ForgotPassword {
 
     // Send Change-Password Link to Email
     public void sendChangePasswordLink(String to, String token) {
+        log.info("Forgot Password Service : sendChangePasswordLink");
         try {
+
+            log.info("Forgot Password Service : constructing change passwrod email message");
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
             message.setSubject("Change Password Link");
             message.setText("Click on the link to change your password: http://localhost:8080/reset-password?token="
                     + token + "&email=" + to);
+
+            log.info("Forgot Password Service : Sending email to " + to);
             mailSender.send(message);
         } catch (Exception e) {
             throw new InternalServerErrorException("Failed to send OTP email: " + e.getMessage());
@@ -99,6 +112,7 @@ public class ForgotPassword {
 
     // Reset Password
     public String resetPassword(ResetPasswordRequest request) {
+        log.info("Forgot Password Service : resetPassword");
 
         // Check if user exists
         User user = userRepository.findByEmail(request.getEmail()).orElse(null);
@@ -114,23 +128,28 @@ public class ForgotPassword {
                 .findByUserIdAndIsUsedFalse(user.getId())
                 .orElseThrow(() -> new BadRequestException("No Token Found"));
 
+        log.info("Forgot Password Service : Checking if token is valid");
         if (!BCrypt.checkpw(request.getToken(), resetPasswordToken.getHashedToken())) {
             throw new BadRequestException("Invalid Token");
         }
 
         // Hash password
+        log.info("Forgot Password Service : Hashing password");
         String hashedPassword = BCrypt.hashpw(request.getNewPassword(), BCrypt.gensalt());
 
         // Update User Password
         user.setPassword(hashedPassword);
 
+        log.info("Forgot Password Service : Updating user password in DB");
         userRepository.save(user);
 
         // Update Token
         resetPasswordToken.setIsUsed(true);
 
+        log.info("Forgot Password Service : mark token as used in DB");
         resetPasswordRepository.save(resetPasswordToken);
 
+        log.info("Forgot Password Service : Resetting OTP attempts");
         rateLimiterService.resetOtpAttempts(request.getEmail(), RateLimiterService.PREFIX_FORGOT_PASSWORD_RATE_LIMIT);
 
         return "Password Changed Successfully";

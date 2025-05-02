@@ -29,7 +29,7 @@ public class AuthService {
 
     // Register User
     public String registerUser(RegisterUserRequest request) {
-        log.info("Service : " + request);
+        log.info("Auth Service : registerUser");
 
         // Check if user already exists
         userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
@@ -44,6 +44,7 @@ public class AuthService {
         // });
 
         // Hash password
+        log.info("Auth Service : Hashing password");
         String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
 
         User user = User.builder()
@@ -59,9 +60,11 @@ public class AuthService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
+        log.info("Auth Service : Saving user to DB");
         User savedUser = userRepository.save(user);
 
         // Send email Verification link
+        log.info("Auth Service : Sending OTP to email");
         otpService.sendOtp(new SendOTPRequest(savedUser.getEmail()));
 
         return savedUser.getId().toString();
@@ -69,6 +72,7 @@ public class AuthService {
 
     // Verify User
     public String verifyUser(VerifiedUserRequest request) {
+        log.info("Auth Service : verifyUser");
 
         String email = request.getEmail();
         String otp = request.getOtp();
@@ -82,10 +86,12 @@ public class AuthService {
         }
 
         // Verify OTP
+        log.info("Auth Service : Verifying OTP");
         if (!otpService.verifyOtp(user.getId(), otp)) {
             throw new BadRequestException("Invalid OTP");
         }
 
+        log.info("Auth Service : OTP verified successfully");
         user.setIsVerified(true);
         userRepository.save(user);
 
@@ -94,6 +100,8 @@ public class AuthService {
 
     // Login
     public LoginResponse login(LoginRequest request) {
+        log.info("Auth Service : login");
+
         String email = request.getEmail();
         String password = request.getPassword();
 
@@ -107,11 +115,13 @@ public class AuthService {
         }
 
         // Check if password is correct
+        log.info("Auth Service : Checking password");
         if (!BCrypt.checkpw(password, user.getPassword())) {
             throw new BadRequestException("Invalid password");
         }
 
         // Generate JWT token
+        log.info("Auth Service : Generating JWT token");
         String token = jwtUtil.generateToken(user.getId().toString(), user.getUsername(), user.getRole());
 
         // Build Response

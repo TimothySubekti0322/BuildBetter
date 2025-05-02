@@ -34,20 +34,31 @@ public class TableauService {
     public TableauResponse[] getTableauData() {
         log.info("Service : Get Tableau Data");
 
-        List<Suggestion> suggestions = suggestionRepository.findAll();
+        List<Suggestion> suggestions = suggestionRepository.findAllSortedByCreatedAt();
+
+        if (suggestions.isEmpty()) {
+            return new TableauResponse[0];
+        }
+
+        TableauResponse[] tableauResponses = new TableauResponse[suggestions.size()];
+        for (int i = 0; i < suggestions.size(); i++) {
+            List<Material> materials0 = materialRepository.findAllById(suggestions.get(i).getMaterials0());
+            List<Material> materials1 = materialRepository.findAllById(suggestions.get(i).getMaterials1());
+            List<Material> materials2 = materialRepository.findAllById(suggestions.get(i).getMaterials2());
+            tableauResponses[i] = TableauUtils.toTableauResponse(suggestions.get(i), materials0, materials1,
+                    materials2);
+        }
+
+        return tableauResponses;
 
         // Map ➜ DTO and return as array
-        return suggestions.stream()
-                .map(this::toResponse)
-                .toArray(TableauResponse[]::new);
+        // return suggestions.stream()
+        // .map(this::toResponse)
+        // .toArray(TableauResponse[]::new);
     }
 
-    /* --------------------------------------------------------------------- */
-
-    /**
-     * Convert one Suggestion entity into its API shape.
-     */
     private TableauResponse toResponse(Suggestion s) {
+        log.info("Service : Convert Suggestion to TableauResponse");
 
         // 1) Floor‑plans: keep max four, fill nulls if list shorter
         String fp1 = null, fp2 = null, fp3 = null, fp4 = null;

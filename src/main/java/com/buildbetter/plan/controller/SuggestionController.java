@@ -27,6 +27,7 @@ import com.buildbetter.plan.service.SuggestionService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
+import com.buildbetter.shared.security.annotation.IsAdmin;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,22 +41,25 @@ public class SuggestionController {
     private final SuggestionService suggestionService;
 
     @PostMapping(path = "")
-    public ApiResponseMessageOnly addSuggestions(@Valid @RequestBody AddSuggestionRequest request) {
-        log.info("Controller : Add suggestion");
+    @IsAdmin
+    public ApiResponseMessageAndData<UUID> addSuggestions(@Valid @RequestBody AddSuggestionRequest request) {
+        log.info("Suggestion Controller : addSuggestions");
 
-        suggestionService.addSugesstion(request);
+        UUID new_record_id = suggestionService.addSugesstion(request);
 
-        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        ApiResponseMessageAndData<UUID> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Suggestions added successfully");
+        response.setData(new_record_id);
 
         return response;
     }
 
     @PostMapping(path = "/upload-floorplans", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @IsAdmin
     public ApiResponseMessageOnly uploadFloorPlans(@Valid @ModelAttribute UploadFloorPlans request) {
-        log.info("Controller : Upload Floor Plans File");
+        log.info("Suggestion Controller : uploadFloorPlans");
 
         suggestionService.uploadFloorPlans(request);
 
@@ -68,8 +72,9 @@ public class SuggestionController {
     }
 
     @PostMapping(path = "/upload-file", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @IsAdmin
     public ApiResponseMessageOnly uploadHouseFile(@Valid @ModelAttribute UploadHouseFileRequest request) {
-        log.info("Controller : Upload House File");
+        log.info("Suggestion Controller : uploadHouseFile");
 
         suggestionService.uploadHouseFile(request);
 
@@ -82,8 +87,9 @@ public class SuggestionController {
     }
 
     @PostMapping("/add-url")
+    @IsAdmin
     public ApiResponseMessageOnly addSugesstionUrl(@Valid @RequestBody AddSuggestionUrlRequest request) {
-        log.info("Controller : Add suggestion URL");
+        log.info("Suggestion Controller : addSugesstionUrl");
 
         suggestionService.addSugesstionUrl(request);
 
@@ -96,14 +102,40 @@ public class SuggestionController {
     }
 
     @GetMapping("")
-    public ApiResponseWithData<?> getAll() {
+    @IsAdmin
+    public ApiResponseWithData<List<SuggestionResponse>> getAllSuggestions() {
+        log.info("Suggestion Controller : getAllSuggestions");
+
         List<SuggestionResponse> suggestions = suggestionService.getAllSuggestions();
-        return new ApiResponseWithData<>(HttpStatus.OK.value(), HttpStatus.OK.name(), suggestions);
+
+        ApiResponseWithData<List<SuggestionResponse>> response = new ApiResponseWithData<>();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setData(suggestions);
+
+        return response;
+    }
+
+    @GetMapping("/{id}")
+    @IsAdmin
+    public ApiResponseWithData<SuggestionResponse> getSuggestionById(@PathVariable UUID id) {
+        log.info("Suggestion Controller : getSuggestionById");
+
+        SuggestionResponse suggestion = suggestionService.getSuggestionById(id);
+
+        ApiResponseWithData<SuggestionResponse> response = new ApiResponseWithData<>();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setData(suggestion);
+
+        return response;
     }
 
     @PatchMapping("/{id}")
-    public ApiResponseMessageOnly updateSuggestion(@PathVariable UUID id, @RequestBody UpdateSuggestionRequest request) {
-        log.info("Controller : Update Suggestion");
+    @IsAdmin
+    public ApiResponseMessageOnly updateSuggestion(@PathVariable UUID id,
+            @RequestBody UpdateSuggestionRequest request) {
+        log.info("Suggestion Controller : updateSuggestion");
 
         suggestionService.updateSuggestion(id, request);
 
@@ -116,8 +148,9 @@ public class SuggestionController {
     }
 
     @DeleteMapping(path = "/{id}")
+    @IsAdmin
     public ApiResponseMessageOnly deleteSuggestion(@PathVariable UUID id) {
-        log.info("Controller : Delete suggestion");
+        log.info("Suggestion Controller : deleteSuggestion");
 
         suggestionService.deleteSuggestion(id);
 

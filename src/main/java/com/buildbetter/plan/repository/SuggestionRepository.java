@@ -56,5 +56,8 @@ public interface SuggestionRepository extends JpaRepository<Suggestion, UUID> {
 
         List<Suggestion> findByStyleIgnoreCase(String style);
 
-        
+        @Query(value = "SELECT * FROM suggestions s " +
+                        "ORDER BY s.created_at DESC", nativeQuery = true)
+        List<Suggestion> findAllSortedByCreatedAt();
+
 }

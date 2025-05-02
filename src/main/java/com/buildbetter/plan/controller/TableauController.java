@@ -19,7 +19,7 @@ public class TableauController {
 
     @GetMapping("")
     public TableauResponse[] getTableauData() {
-        log.info("Controller : Get Tableau Data");
+        log.info("Tableau Controller : getTableauData");
 
         TableauResponse[] tableauResponse = tableauService.getTableauData();
         return tableauResponse;

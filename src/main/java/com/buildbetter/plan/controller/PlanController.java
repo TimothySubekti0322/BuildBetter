@@ -34,11 +34,13 @@ public class PlanController {
     @PostMapping("")
     @Authenticated
     public ApiResponseMessageOnly addPlans(Authentication auth, @Valid @RequestBody AddPlanRequest request) {
+        log.info("Plan Controller : addPlans");
 
+        log.info("Plan Controller : addPlans - Parse JWT Authentication");
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID userId = UUID.fromString(jwt.claim("id"));
 
-        planService.AddPlan(userId, request);
+        planService.addPlan(userId, request);
 
         ApiResponseMessageOnly response = new ApiResponseMessageOnly();
         response.setCode(HttpStatus.OK.value());
@@ -51,6 +53,9 @@ public class PlanController {
     @GetMapping("")
     @Authenticated
     public ApiResponseMessageAndData<GetPlansResponse[]> getAllPlans(Authentication auth) {
+        log.info("Plan Controller : getAllPlans");
+
+        log.info("Plan Controller : getAllPlans - Parse JWT Authentication");
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID userId = UUID.fromString(jwt.claim("id"));
 
@@ -61,14 +66,18 @@ public class PlanController {
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Plans fetched successfully");
         response.setData(plansResponse);
+
         return response;
     }
 
     @GetMapping("/{id}")
     @Authenticated
     public ApiResponseMessageAndData<GetPlansResponse> getPlanById(@PathVariable String id) {
+        log.info("Plan Controller : getPlanById");
 
+        log.info("Plan Controller : getPlanById - Parse UUID from PathVariable");
         UUID planUuid = UUID.fromString(id);
+
         GetPlansResponse planResponse = planService.getPlanById(planUuid);
 
         ApiResponseMessageAndData<GetPlansResponse> response = new ApiResponseMessageAndData<>();
@@ -76,6 +85,7 @@ public class PlanController {
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Plan fetched successfully");
         response.setData(planResponse);
+
         return response;
     }
 }

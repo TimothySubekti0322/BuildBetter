@@ -36,14 +36,14 @@ public class AuthController {
     private final AuthService authService;
     private final ForgotPassword forgotPassword;
 
-    @GetMapping("/hello")
+    @GetMapping("/ping")
     public ResponseEntity getHello() {
         return ResponseEntity.ok("Hello From Build Better");
     }
 
     @PostMapping("/register")
     public ApiResponseMessageAndData<String> registerUser(@Valid @RequestBody RegisterUserRequest request) {
-        log.info("Auth Controller : register user : (payload) " + request);
+        log.info("Auth Controller : registerUser");
         String message = authService.registerUser(request);
 
         ApiResponseMessageAndData<String> response = new ApiResponseMessageAndData<>();
@@ -57,7 +57,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ApiResponseWithData<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("Auth Controller : login user : (payload) " + request);
+        log.info("Auth Controller : login");
         LoginResponse loginResponse = authService.login(request);
 
         ApiResponseWithData<LoginResponse> response = new ApiResponseWithData<>();
@@ -70,7 +70,7 @@ public class AuthController {
 
     @PostMapping("/send-otp")
     public ApiResponseMessageOnly sendOtp(@Valid @RequestBody SendOTPRequest request) {
-        log.info("Auth Controller : send otp : (payload) " + request);
+        log.info("Auth Controller : sendOtp");
 
         otpService.sendOtp(request);
 
@@ -84,7 +84,7 @@ public class AuthController {
 
     @PostMapping("/verify-user")
     public ApiResponseMessageOnly verifyUser(@Valid @RequestBody VerifiedUserRequest request) {
-        log.info("Auth Controller : verify user : (payload) " + request);
+        log.info("Auth Controller : verifyUser");
 
         String message = authService.verifyUser(request);
 
@@ -98,7 +98,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ApiResponseMessageOnly forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        log.info("Auth Controller : forgot password : (payload) " + request);
+        log.info("Auth Controller : forgotPassword");
 
         String message = forgotPassword.forgotPassword(request.getEmail());
 
@@ -111,8 +111,8 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ApiResponseMessageOnly postMethodName(@Valid @RequestBody ResetPasswordRequest request) {
-        log.info("Auth Controller : reset password : (payload) " + request);
+    public ApiResponseMessageOnly resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        log.info("Auth Controller : resetPassword");
 
         String message = forgotPassword.resetPassword(request);
 

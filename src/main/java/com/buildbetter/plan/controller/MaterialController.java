@@ -23,6 +23,7 @@ import com.buildbetter.plan.service.MaterialService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
+import com.buildbetter.shared.security.annotation.IsAdmin;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,8 +37,9 @@ public class MaterialController {
     private final MaterialService materialService;
 
     @PostMapping(path = "", consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @IsAdmin
     public ApiResponseMessageOnly addMaterial(@Valid @ModelAttribute AddMaterialRequest request) {
-        log.info("Controller : Add material");
+        log.info("Material Controller : addMaterial");
 
         materialService.addMaterial(request);
 
@@ -50,7 +52,10 @@ public class MaterialController {
     }
 
     @GetMapping("")
-    public ApiResponseWithData<?> getAll(@RequestParam(defaultValue = "false") boolean grouped) {
+    @IsAdmin
+    public ApiResponseWithData<?> getAllMaterial(@RequestParam(defaultValue = "false") boolean grouped) {
+        log.info("Material Controller : getAllMaterial");
+
         if (grouped) {
             List<GroupedMaterialResponse> groupedMaterials = materialService.getAllGroupedMaterials();
             return new ApiResponseWithData<>(HttpStatus.OK.value(), HttpStatus.OK.name(), groupedMaterials);
@@ -61,35 +66,50 @@ public class MaterialController {
     }
 
     @GetMapping("/{id}")
+    @IsAdmin
     public ApiResponseWithData<MaterialResponse> getMaterialById(@PathVariable UUID id) {
+        log.info("Material Controller : getMaterialById");
+
         MaterialResponse material = materialService.getMaterialById(id);
+
         ApiResponseWithData<MaterialResponse> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(material);
+
         return response;
     }
 
     @PatchMapping(path = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponseMessageAndData<MaterialResponse> update(
+    @IsAdmin
+    public ApiResponseMessageAndData<MaterialResponse> updateMaterial(
             @PathVariable UUID id,
             @ModelAttribute UpdateMaterialRequest request) {
+        log.info("Material Controller : updateMaterial");
+
         MaterialResponse result = materialService.updateMaterial(id, request);
+
         ApiResponseMessageAndData<MaterialResponse> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(result);
         response.setMessage("Material updated successfully");
+
         return response;
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponseMessageOnly delete(@PathVariable UUID id) {
+    @IsAdmin
+    public ApiResponseMessageOnly deleteMaterial(@PathVariable UUID id) {
+        log.info("Material Controller : deleteMaterial - " + id);
+
         materialService.deleteMaterial(id);
+
         ApiResponseMessageOnly response = new ApiResponseMessageOnly();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Material deleted successfully");
+
         return response;
     }
 

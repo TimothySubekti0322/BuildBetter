@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.shared.dto.ApiResponseWithData;
+import com.buildbetter.shared.security.annotation.IsAdmin;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.service.UserService;
 
@@ -23,8 +24,9 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping("/")
+    @IsAdmin
     public ApiResponseWithData<List<User>> getAllUsers() {
-        log.info("Controller : Get all users");
+        log.info("User Controller : getAllUsers");
 
         List<User> users = userService.getAllUsers();
 
