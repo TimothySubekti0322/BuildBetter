@@ -3,8 +3,6 @@ name: Build‑Push‑Deploy
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - ".github/workflows/deploy.yml"
 
 permissions:
   contents: read

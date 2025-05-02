@@ -1,7 +1,6 @@
 package com.buildbetter.user.controller;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,8 +36,12 @@ public class AuthController {
     private final ForgotPassword forgotPassword;
 
     @GetMapping("/ping")
-    public ResponseEntity getHello() {
-        return ResponseEntity.ok("Hello From Build Better");
+    public ApiResponseMessageOnly getHello() {
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Hello from Auth Controller");
+        return response;
     }
 
     @PostMapping("/register")
