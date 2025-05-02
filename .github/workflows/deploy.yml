@@ -3,6 +3,8 @@ name: Build‑Push‑Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - ".github/workflows/deploy.yml"
 
 permissions:
   contents: read
@@ -96,44 +98,22 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
-            set -e
+            # ─── 1. Login to ECR ──────────────────────────────────────────────
+            echo ":: Logging in to ECR \$ECR_REGISTRY"
+            aws ecr get-login-password --region "$AWS_REGION" | sudo docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
-            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
-            export AWS_REGION='${{ env.AWS_REGION }}'
+            # ─── 2. Pull latest image ─────────────────────────────────────────
+            IMAGE="\$ECR_REGISTRY/\$ECR_REPOSITORY:\$IMAGE_TAG"
+            echo ":: Pulling \$IMAGE"
+            sudo docker pull "\$IMAGE"
 
-            export ECR_REG='${{ env.ECR_REGISTRY }}'
-            export ECR_REPO='${{ env.ECR_REPOSITORY }}'
-            export TAG='${{ env.IMAGE_TAG }}'
-
-            export DB_URL='${{ secrets.DB_URL }}'
-            export DB_USERNAME='${{ secrets.DB_USERNAME }}'
-            export DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
-            export JWT_SECRET='${{ secrets.JWT_SECRET }}'
-            export MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}'
-            export REDIS_HOST='${{ secrets.REDIS_HOST }}'
-            export REDIS_PORT='${{ secrets.REDIS_PORT }}'
-
-            AWS_REGION='${{ env.AWS_REGION }}'
-            ECR_REG='${{ env.ECR_REGISTRY }}'
-            ECR_REPO='${{ env.ECR_REPOSITORY }}'
-            TAG='${{ env.IMAGE_TAG }}'
-
-            ECR_PATH="\$ECR_REG/\$ECR_REPO"
-
-            echo ":: Logging in to ECR"
-            aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_REG}
-
-            echo ":: Pulling new image \$ECR_PATH:\$TAG"
-            sudo docker pull \$ECR_PATH:\$TAG
-
-            echo ":: Ensure network 'internal-network' exists"
+            # ─── 3. Create network if necessary ───────────────────────────────
             sudo docker network inspect internal-network >/dev/null 2>&1 \
-              || docker network create internal-network
+              || sudo docker network create internal-network
 
-            echo ":: Stopping old container (if running)"
+            # ─── 4. Stop old container (if any) ───────────────────────────────
             sudo docker rm -f buildbetter-backend || true
-
+            
             echo ":: Starting new container"
             sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
 
