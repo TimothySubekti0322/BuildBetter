@@ -3,6 +3,8 @@ name: Build‑Push‑Deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - .github/workflows/deploy.yml
 
 permissions:
   contents: read
@@ -15,6 +17,22 @@ env:
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 23
+
+      - name: Run unit tests
+        continue-on-error: true
+        run: mvn test
+
   build-and-push:
     runs-on: ubuntu-latest
 
@@ -131,7 +149,18 @@ jobs:
             sudo docker rm -f buildbetter-backend || true
             
             echo ":: Starting new container"
-            sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT \$ECR_PATH:\$TAG
+            sudo docker run -d --name buildbetter-backend --network internal-network \
+              -p 8080:8080 \
+              -e DB_URL="$DB_URL" \
+              -e DB_USERNAME="$DB_USERNAME" \
+              -e DB_PASSWORD="$DB_PASSWORD" \
+              -e JWT_SECRET="$JWT_SECRET" \
+              -e MAIL_PASSWORD="$MAIL_PASSWORD" \
+              -e REDIS_HOST="$REDIS_HOST" \
+              -e REDIS_PORT="$REDIS_PORT" \
+              "$IMAGE"
+              
+            # sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT "\$IMAGE"
 
             echo ":: Deployed \$ECR_PATH:\$TAG"
           EOF

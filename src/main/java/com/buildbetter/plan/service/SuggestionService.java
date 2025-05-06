@@ -80,8 +80,7 @@ public class SuggestionService {
 
         String folder = S3Folder.SUGGESTIONS + suggestion.getHouseNumber() + "/";
 
-        List<String> floorPlansList = suggestion.getFloorplans() != null ? suggestion.getFloorplans()
-                : new ArrayList<>();
+        List<String> floorPlansList = new ArrayList<>();
 
         // Upload FloorPlan
         for (MultipartFile floorplan : request.getFiles()) {
