@@ -42,8 +42,10 @@ public class SuggestionResponse {
     private String houseImageBack;
     private String houseImageSide;
 
+    private String pdf;
+
     // ── material IDs ─────────────────────────────────────────
-    Map<String, Map<String, Material>> materials0;
-    Map<String, Map<String, Material>> materials1;
-    Map<String, Map<String, Material>> materials2;
+    Map<String, Map<String, List<Material>>> materials0;
+    Map<String, Map<String, List<Material>>> materials1;
+    Map<String, Map<String, List<Material>>> materials2;
 }

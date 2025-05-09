@@ -9,11 +9,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.buildbetter.plan.constant.HouseMaterial;
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionRequest;
 import com.buildbetter.plan.model.Material;
@@ -42,6 +40,7 @@ public class SuggestionUtils {
                 .budgetMax(s.getBudgetMax())
                 .floorplans(s.getFloorplans())
                 .object(s.getObject())
+                .pdf(s.getPdf())
                 .houseImageFront(s.getHouseImageFront())
                 .houseImageBack(s.getHouseImageBack())
                 .houseImageSide(s.getHouseImageSide())
@@ -51,23 +50,35 @@ public class SuggestionUtils {
                 .build();
     }
 
-    public static Map<String, Map<String, Material>> groupByCatAndSub(List<UUID> ids,
+    public static Map<String, Map<String, List<Material>>> groupByCatAndSub(List<UUID> ids,
             Map<UUID, Material> materialById) {
 
         if (ids == null || ids.isEmpty())
             return Collections.emptyMap();
 
+        // return ids.stream()
+        // .map(materialById::get) // null‑safe → skip unknown ids
+        // .filter(Objects::nonNull)
+        // .map(SuggestionUtils::toDto) // Corrected: Using class name for static method
+        // .collect(Collectors.groupingBy(
+        // Material::getCategory, // first level
+        // LinkedHashMap::new,
+        // Collectors.toMap(Material::getSubCategory,
+        // Function.identity(),
+        // (a, b) -> a, // keep first if duplicate
+        // LinkedHashMap::new)));
         return ids.stream()
-                .map(materialById::get) // null‑safe → skip unknown ids
-                .filter(Objects::nonNull)
-                .map(SuggestionUtils::toDto) // Corrected: Using class name for static method
-                .collect(Collectors.groupingBy(
-                        Material::getCategory, // first level
+                .map(materialById::get) // null-safe lookup
+                .filter(Objects::nonNull) // skip unknown ids
+                // .map(SuggestionUtils::toDto) // keep if you still need DTO conversion
+                .collect(Collectors.groupingBy( // ── 1st level: category
+                        Material::getCategory,
                         LinkedHashMap::new,
-                        Collectors.toMap(Material::getSubCategory,
-                                Function.identity(),
-                                (a, b) -> a, // keep first if duplicate
-                                LinkedHashMap::new)));
+                        Collectors.groupingBy( // ── 2nd level: sub-category
+                                Material::getSubCategory,
+                                LinkedHashMap::new,
+                                Collectors.toList() // collect every material into a List
+                        )));
     }
 
     public static Material toDto(Material m) {
@@ -97,66 +108,67 @@ public class SuggestionUtils {
                 .collect(Collectors.toSet());
     }
 
-    public static Map<String, Map<String, Material>> buildMaterialTree(
-            List<UUID> materialIds,
-            Map<UUID, Material> loaded) {
+    // public static Map<String, Map<String, Material>> buildMaterialTree(
+    //         List<UUID> materialIds,
+    //         Map<UUID, Material> loaded) {
 
-        Map<String, Map<String, Material>> tree = new LinkedHashMap<>();
+    //     Map<String, Map<String, Material>> tree = new LinkedHashMap<>();
 
-        // fill every (category, subCategory) with a null placeholder
-        for (HouseMaterial hm : HouseMaterial.values()) {
-            tree.computeIfAbsent(hm.getCategory(), k -> new LinkedHashMap<>())
-                    .put(hm.getSubCategory(), null); // <── changed line
-        }
+    //     // fill every (category, subCategory) with a null placeholder
+    //     for (HouseMaterial hm : HouseMaterial.values()) {
+    //         tree.computeIfAbsent(hm.getCategory(), k -> new LinkedHashMap<>())
+    //                 .put(hm.getSubCategory(), null); // <── changed line
+    //     }
 
-        if (materialIds != null) {
-            for (UUID id : materialIds) {
-                Material m = loaded.get(id);
-                if (m != null) {
-                    tree.get(m.getCategory())
-                            .put(m.getSubCategory(), m); // overwrite placeholder
-                }
-            }
-        }
+    //     if (materialIds != null) {
+    //         for (UUID id : materialIds) {
+    //             Material m = loaded.get(id);
+    //             if (m != null) {
+    //                 tree.get(m.getCategory())
+    //                         .put(m.getSubCategory(), m); // overwrite placeholder
+    //             }
+    //         }
+    //     }
 
-        return tree;
-    }
+    //     return tree;
+    // }
 
-    public static SuggestionResponse toArrayOfSuggestionResponses(
-            Suggestion s,
-            Map<UUID, Material> materialMap) {
+    // public static SuggestionResponse toArrayOfSuggestionResponses(
+    //         Suggestion s,
+    //         Map<UUID, Material> materialMap) {
 
-        return SuggestionResponse.builder()
-                .id(s.getId())
-                .houseNumber(s.getHouseNumber())
+    //     return SuggestionResponse.builder()
+    //             .id(s.getId())
+    //             .houseNumber(s.getHouseNumber())
 
-                // ── dimensions ─────────────────────────────
-                .landArea(s.getLandArea())
-                .buildingArea(s.getBuildingArea())
-                .style(s.getStyle())
-                .floor(s.getFloor())
-                .rooms(s.getRooms())
-                .buildingHeight(s.getBuildingHeight())
-                .designer(s.getDesigner())
+    //             // ── dimensions ─────────────────────────────
+    //             .landArea(s.getLandArea())
+    //             .buildingArea(s.getBuildingArea())
+    //             .style(s.getStyle())
+    //             .floor(s.getFloor())
+    //             .rooms(s.getRooms())
+    //             .buildingHeight(s.getBuildingHeight())
+    //             .designer(s.getDesigner())
 
-                // ── budgeting ──────────────────────────────
-                .defaultBudget(s.getDefaultBudget())
-                .budgetMin(s.getBudgetMin())
-                .budgetMax(s.getBudgetMax())
+    //             // ── budgeting ──────────────────────────────
+    //             .defaultBudget(s.getDefaultBudget())
+    //             .budgetMin(s.getBudgetMin())
+    //             .budgetMax(s.getBudgetMax())
 
-                // ── design assets ──────────────────────────
-                .floorplans(s.getFloorplans())
-                .object(s.getObject())
-                .houseImageFront(s.getHouseImageFront())
-                .houseImageBack(s.getHouseImageBack())
-                .houseImageSide(s.getHouseImageSide())
+    //             // ── design assets ──────────────────────────
+    //             .floorplans(s.getFloorplans())
+    //             .object(s.getObject())
+    //             .pdf(s.getPdf())
+    //             .houseImageFront(s.getHouseImageFront())
+    //             .houseImageBack(s.getHouseImageBack())
+    //             .houseImageSide(s.getHouseImageSide())
 
-                // ── material maps ──────────────────────────
-                .materials0(buildMaterialTree(s.getMaterials0(), materialMap))
-                .materials1(buildMaterialTree(s.getMaterials1(), materialMap))
-                .materials2(buildMaterialTree(s.getMaterials2(), materialMap))
-                .build();
-    }
+    //             // ── material maps ──────────────────────────
+    //             .materials0(buildMaterialTree(s.getMaterials0(), materialMap))
+    //             .materials1(buildMaterialTree(s.getMaterials1(), materialMap))
+    //             .materials2(buildMaterialTree(s.getMaterials2(), materialMap))
+    //             .build();
+    // }
 
     public static GenerateSuggestionRequest planToGenerateSuggestionRequest(Plan plan,
             SuggestionResponse suggestion) {

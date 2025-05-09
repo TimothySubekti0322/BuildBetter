@@ -390,9 +390,9 @@ public class SuggestionService {
 
         /* map to Array of Suggestion */
         log.info(
-                "Suggestion Service : generateSuggestion - Map selected suggestions to SuggestionResponse (SuggestionUtils.toArrayOfSuggestionResponses)");
+                "Suggestion Service : generateSuggestion - Map selected suggestions to SuggestionResponse (SuggestionUtils.toGetSuggestionResponse)");
         SuggestionResponse[] suggestions = selected.stream()
-                .map(s -> SuggestionUtils.toArrayOfSuggestionResponses(s, mats))
+                .map(s -> SuggestionUtils.toGetSuggestionResponse(s, mats))
                 .toArray(SuggestionResponse[]::new);
 
         response.setSuggestions(suggestions);
