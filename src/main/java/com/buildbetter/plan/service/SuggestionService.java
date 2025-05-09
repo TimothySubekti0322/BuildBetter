@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.buildbetter.plan.constant.HouseFileType;
@@ -121,35 +122,48 @@ public class SuggestionService {
 
         log.info("Suggestion Service : uploadHouseFile - Convert HouseFileType into enum");
         HouseFileType houseFileType = HouseFileType.fromValueIgnoreCase(request.getType());
+
         // Set the house image based on the type
         if (houseFileType == HouseFileType.HOUSE_IMAGE_FRONT) {
-            if (suggestion.getHouseImageFront() != null) {
-                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
-                        + suggestion.getHouseImageFront() + " from S3");
-                s3Service.deleteFile(suggestion.getHouseImageFront());
+            String houseImage = suggestion.getHouseImageFront();
+            if (StringUtils.hasText(houseImage)) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house file "
+                        + houseImage + " from S3");
+                s3Service.deleteFile(houseImage);
             }
             suggestion.setHouseImageFront(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_BACK) {
-            if (suggestion.getHouseImageBack() != null) {
-                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
-                        + suggestion.getHouseImageFront() + " from S3");
-                s3Service.deleteFile(suggestion.getHouseImageBack());
+            String houseImage = suggestion.getHouseImageBack();
+            if (StringUtils.hasText(houseImage)) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house file "
+                        + houseImage + " from S3");
+                s3Service.deleteFile(houseImage);
             }
             suggestion.setHouseImageBack(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_SIDE) {
-            if (suggestion.getHouseImageSide() != null) {
-                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
-                        + suggestion.getHouseImageFront() + " from S3");
-                s3Service.deleteFile(suggestion.getHouseImageSide());
+            String houseImage = suggestion.getHouseImageSide();
+            if (StringUtils.hasText(houseImage)) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house file "
+                        + houseImage + " from S3");
+                s3Service.deleteFile(houseImage);
             }
             suggestion.setHouseImageSide(houseImageObjectUrl);
         } else if (houseFileType == HouseFileType.HOUSE_OBJECT) {
-            if (suggestion.getObject() != null) {
-                log.info("Suggestion Service : uploadHouseFile - Delete old house image file "
-                        + suggestion.getHouseImageFront() + " from S3");
-                s3Service.deleteFile(suggestion.getObject());
+            String houseImage = suggestion.getObject();
+            if (StringUtils.hasText(houseImage)) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house file "
+                        + houseImage + " from S3");
+                s3Service.deleteFile(houseImage);
             }
             suggestion.setObject(houseImageObjectUrl);
+        } else if (houseFileType == HouseFileType.PDF) {
+            String houseImage = suggestion.getPdf();
+            if (StringUtils.hasText(houseImage)) {
+                log.info("Suggestion Service : uploadHouseFile - Delete old house file "
+                        + houseImage + " from S3");
+                s3Service.deleteFile(houseImage);
+            }
+            suggestion.setPdf(houseImageObjectUrl);
         }
 
         log.info("Suggestion Service : uploadHouseFile - Save updated suggestion to DB");
@@ -164,15 +178,19 @@ public class SuggestionService {
 
         log.info("Suggestion Service : addSuggestionUrl - Convert HouseFileType into enum");
         HouseFileType houseFileType = HouseFileType.fromValueIgnoreCase(request.getType());
+
         // Set the house image based on the type
+        String url = request.getUrl();
         if (houseFileType == HouseFileType.HOUSE_IMAGE_FRONT) {
-            suggestion.setHouseImageFront(request.getUrl());
+            suggestion.setHouseImageFront(url);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_BACK) {
-            suggestion.setHouseImageBack(request.getUrl());
+            suggestion.setHouseImageBack(url);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_SIDE) {
-            suggestion.setHouseImageSide(request.getUrl());
+            suggestion.setHouseImageSide(url);
         } else if (houseFileType == HouseFileType.HOUSE_OBJECT) {
-            suggestion.setObject(request.getUrl());
+            suggestion.setObject(url);
+        } else if (houseFileType == HouseFileType.PDF) {
+            suggestion.setPdf(url);
         }
 
         log.info("Suggestion Service : addSugesstionUrl - Save updated suggestion to DB");

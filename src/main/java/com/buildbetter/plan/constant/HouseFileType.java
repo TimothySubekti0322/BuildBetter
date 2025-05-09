@@ -10,7 +10,7 @@ public enum HouseFileType {
     HOUSE_IMAGE_BACK("house_image_back"),
     HOUSE_IMAGE_SIDE("house_image_side"),
     HOUSE_OBJECT("house_object"),
-    FLOOR_PLANS("floor_plans");
+    PDF("pdf");
 
     private final String value;
 

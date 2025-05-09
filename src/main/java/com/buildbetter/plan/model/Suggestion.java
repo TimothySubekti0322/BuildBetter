@@ -75,6 +75,9 @@ public class Suggestion {
     @Column(name = "house_image_side", columnDefinition = "text")
     private String houseImageSide;
 
+    @Column(name = "pdf", columnDefinition = "text")
+    private String pdf; // PDF URL
+
     // ── material IDs ─────────────────────────────────────────
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "materials_0", columnDefinition = "uuid[]")
