@@ -2,6 +2,7 @@ package com.buildbetter.plan.util;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,6 +56,7 @@ public class TableauUtils {
         /* 3) Build the DTO -------------------------------------------------- */
         return TableauResponse.builder()
                 .id(s.getId())
+                .houseNumber(s.getHouseNumber())
                 .landArea(s.getLandArea())
                 .buildingArea(s.getBuildingArea())
                 .style(s.getStyle())
@@ -111,12 +113,14 @@ public class TableauUtils {
             return Collections.emptyMap();
         }
 
-        // Assuming `Material.category` already holds strings like “roof”, “door”, etc.
+        // subCategory → "name1,name2,…"
         return materials.stream()
-                .collect(Collectors.toMap(
-                        Material::getSubCategory, // key = category
-                        Material::getName, // value = material name
-                        (first, second) -> first // on duplicate category keep 1st
-                ));
+                .collect(Collectors.groupingBy(
+                        Material::getSubCategory, // key
+                        LinkedHashMap::new, // keep insertion order
+                        Collectors.mapping(
+                                Material::getName, // extract each name
+                                Collectors.joining(",") // join names with commas
+                        )));
     }
 }

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class TableauResponse {
     private UUID id;
+    private String houseNumber;
     private int landArea;
     private int buildingArea;
     private String style;
