@@ -120,7 +120,7 @@ public class TableauUtils {
                         LinkedHashMap::new, // keep insertion order
                         Collectors.mapping(
                                 Material::getName, // extract each name
-                                Collectors.joining(",") // join names with commas
+                                Collectors.joining(", ") // join names with commas
                         )));
     }
 }
