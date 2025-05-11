@@ -112,7 +112,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
 
             # ── 0. Export credentials for this shell ──────────────────────────
             export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}"
@@ -155,7 +155,7 @@ jobs:
               -e DB_USERNAME="$DB_USERNAME" \
               -e DB_PASSWORD="$DB_PASSWORD" \
               -e JWT_SECRET="$JWT_SECRET" \
-              -e MAIL_PASSWORD="$MAIL_PASSWORD" \
+              -e MAIL_PASSWORD='$MAIL_PASSWORD' \
               -e REDIS_HOST="$REDIS_HOST" \
               -e REDIS_PORT="$REDIS_PORT" \
               "$IMAGE"

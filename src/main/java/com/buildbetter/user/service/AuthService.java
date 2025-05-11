@@ -133,6 +133,5 @@ public class AuthService {
         loginResponse.setUsername(user.getUsername());
 
         return loginResponse;
-
     }
 }
