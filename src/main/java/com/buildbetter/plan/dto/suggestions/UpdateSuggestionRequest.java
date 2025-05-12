@@ -3,6 +3,8 @@ package com.buildbetter.plan.dto.suggestions;
 import java.util.List;
 import java.util.UUID;
 
+import com.buildbetter.plan.validation.annotation.ValidWindDirection;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,6 +14,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateSuggestionRequest {
     private String houseNumber;
+    @ValidWindDirection
+    private List<String> windDirection;
     private int landArea;
     private int buildingArea;
     private String style;

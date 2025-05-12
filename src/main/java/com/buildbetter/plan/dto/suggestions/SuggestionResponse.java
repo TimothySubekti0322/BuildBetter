@@ -19,6 +19,7 @@ public class SuggestionResponse {
 
     private UUID id;
     private String houseNumber;
+    private List<String> windDirection;
 
     // ── dimensions ───────────────────────────────────────────
     private int landArea;

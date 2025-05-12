@@ -48,12 +48,13 @@ public class SuggestionService {
     private final SuggestionRepository suggestionRepository;
     private final S3Service s3Service;
 
-    public UUID addSugesstion(AddSuggestionRequest request) {
+    public UUID addSuggestion(AddSuggestionRequest request) {
         log.info("Suggestion Service : addSugesstion");
 
         Suggestion suggestion = new Suggestion();
 
         suggestion.setHouseNumber(request.getHouseNumber());
+        suggestion.setWindDirection(request.getWindDirection());
         suggestion.setLandArea(request.getLandArea());
         suggestion.setBuildingArea(request.getBuildingArea());
         suggestion.setStyle(request.getStyle());
@@ -258,6 +259,9 @@ public class SuggestionService {
 
         existingSuggestion.setHouseNumber(
                 request.getHouseNumber() != null ? request.getHouseNumber() : existingSuggestion.getHouseNumber());
+        existingSuggestion.setWindDirection(
+                request.getWindDirection() != null ? request.getWindDirection()
+                        : existingSuggestion.getWindDirection());
         existingSuggestion
                 .setLandArea(request.getLandArea() != 0 ? request.getLandArea() : existingSuggestion.getLandArea());
         existingSuggestion.setBuildingArea(
@@ -314,6 +318,9 @@ public class SuggestionService {
         }
         if (suggestion.getObject() != null) {
             s3Service.deleteFile(suggestion.getObject());
+        }
+        if (suggestion.getPdf() != null) {
+            s3Service.deleteFile(suggestion.getPdf());
         }
 
         log.info("Suggestion Service : deleteSuggestion - Delete suggestion from DB");

@@ -2,7 +2,7 @@ package com.buildbetter.plan.dto.suggestions;
 
 import java.util.UUID;
 
-import com.buildbetter.plan.validation.ValidHouseFileType;
+import com.buildbetter.plan.validation.annotation.ValidHouseFileType;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

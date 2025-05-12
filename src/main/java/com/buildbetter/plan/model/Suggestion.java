@@ -36,6 +36,9 @@ public class Suggestion {
     @Column(name = "house_number")
     private String houseNumber;
 
+    @Column(name = "wind_direction")
+    private List<String> windDirection;
+
     // ── dimensions ───────────────────────────────────────────
     @Column(name = "land_area")
     private int landArea;

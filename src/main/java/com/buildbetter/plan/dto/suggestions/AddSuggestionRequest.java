@@ -3,6 +3,8 @@ package com.buildbetter.plan.dto.suggestions;
 import java.util.List;
 import java.util.UUID;
 
+import com.buildbetter.plan.validation.annotation.ValidWindDirection;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -17,6 +19,11 @@ public class AddSuggestionRequest {
 
     @NotBlank(message = "Field 'houseNumber' is required")
     private String houseNumber;
+
+    @NotNull(message = "Field 'windDirection' is required")
+    @Size(min = 1, message = "Field 'windDirection' must contain at least one value")
+    @ValidWindDirection
+    private List<String> windDirection;
 
     // ── dimensions ─────────────────────────────────
     @NotNull(message = "Field 'landArea' is required")

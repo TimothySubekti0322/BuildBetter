@@ -1,0 +1,1 @@
+ALTER TABLE suggestions ADD COLUMN wind_direction TEXT[] NOT NULL DEFAULT '{}'::TEXT[];

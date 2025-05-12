@@ -45,13 +45,13 @@ public class SuggestionController {
     public ApiResponseMessageAndData<UUID> addSuggestions(@Valid @RequestBody AddSuggestionRequest request) {
         log.info("Suggestion Controller : addSuggestions");
 
-        UUID new_record_id = suggestionService.addSugesstion(request);
+        UUID newRecordId = suggestionService.addSuggestion(request);
 
         ApiResponseMessageAndData<UUID> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Suggestions added successfully");
-        response.setData(new_record_id);
+        response.setData(newRecordId);
 
         return response;
     }
@@ -134,7 +134,7 @@ public class SuggestionController {
     @PatchMapping("/{id}")
     @IsAdmin
     public ApiResponseMessageOnly updateSuggestion(@PathVariable UUID id,
-            @RequestBody UpdateSuggestionRequest request) {
+            @Valid @RequestBody UpdateSuggestionRequest request) {
         log.info("Suggestion Controller : updateSuggestion");
 
         suggestionService.updateSuggestion(id, request);
