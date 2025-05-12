@@ -100,7 +100,7 @@ public class ForgotPassword {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
             message.setSubject("Change Password Link");
-            message.setText("Click on the link to change your password: http://localhost:8080/reset-password?token="
+            message.setText("Click on the link to change your password: myapp://forgot-password?token="
                     + token + "&email=" + to);
 
             log.info("Forgot Password Service : Sending email to " + to);
