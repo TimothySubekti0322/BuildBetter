@@ -13,7 +13,7 @@ import com.buildbetter.shared.exception.ForbiddenException;
 import com.buildbetter.shared.exception.InternalServerErrorException;
 import com.buildbetter.shared.exception.NotFoundException;
 import com.buildbetter.shared.exception.TooManyRequestException;
-import com.buildbetter.user.dto.SendOTPRequest;
+import com.buildbetter.user.dto.auth.SendOTPRequest;
 import com.buildbetter.user.model.Otp;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.OtpRepository;

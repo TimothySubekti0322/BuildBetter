@@ -1,4 +1,4 @@
-package com.buildbetter.user.dto;
+package com.buildbetter.user.dto.auth;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -19,7 +19,7 @@ public class GetUserResponse {
     private String username;
     private String province;
     private String city;
-    private String photos;
+    private String photo;
     private String role;
     private LocalDateTime createdAt;
 }

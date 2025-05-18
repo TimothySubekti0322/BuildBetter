@@ -45,8 +45,8 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "photos")
-    private String photos;
+    @Column(name = "photo")
+    private String photo;
 
     @Column(name = "role")
     private String role; // e.g. "user", "admin", "architect"

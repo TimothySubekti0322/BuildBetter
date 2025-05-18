@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 
 import com.buildbetter.shared.exception.BadRequestException;
 import com.buildbetter.shared.util.JwtUtil;
-import com.buildbetter.user.dto.LoginRequest;
-import com.buildbetter.user.dto.LoginResponse;
-import com.buildbetter.user.dto.RegisterUserRequest;
-import com.buildbetter.user.dto.SendOTPRequest;
-import com.buildbetter.user.dto.VerifiedUserRequest;
+import com.buildbetter.user.dto.auth.LoginRequest;
+import com.buildbetter.user.dto.auth.LoginResponse;
+import com.buildbetter.user.dto.auth.RegisterUserRequest;
+import com.buildbetter.user.dto.auth.SendOTPRequest;
+import com.buildbetter.user.dto.auth.VerifiedUserRequest;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.UserRepository;
 

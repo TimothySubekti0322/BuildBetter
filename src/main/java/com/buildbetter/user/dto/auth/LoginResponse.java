@@ -1,4 +1,4 @@
-package com.buildbetter.user.dto;
+package com.buildbetter.user.dto.auth;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

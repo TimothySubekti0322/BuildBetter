@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.buildbetter.shared.exception.BadRequestException;
 import com.buildbetter.shared.exception.InternalServerErrorException;
-import com.buildbetter.user.dto.ResetPasswordRequest;
+import com.buildbetter.user.dto.auth.ResetPasswordRequest;
 import com.buildbetter.user.model.ResetPasswordToken;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.ResetPasswordRepository;

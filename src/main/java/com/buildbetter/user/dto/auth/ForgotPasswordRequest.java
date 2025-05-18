@@ -1,4 +1,4 @@
-package com.buildbetter.user.dto;
+package com.buildbetter.user.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SendOTPRequest {
+public class ForgotPasswordRequest {
     @NotBlank(message = "Field 'email' is required")
     @Email(message = "Invalid email format")
     private String email;
