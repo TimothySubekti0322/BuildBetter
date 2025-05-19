@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
-import com.buildbetter.shared.security.annotation.IsAdmin;
 import com.buildbetter.user.dto.auth.ForgotPasswordRequest;
 import com.buildbetter.user.dto.auth.LoginRequest;
 import com.buildbetter.user.dto.auth.LoginResponse;
@@ -127,20 +126,4 @@ public class AuthController {
 
         return response;
     }
-
-    @PostMapping("/register/architect")
-    @IsAdmin
-    public ApiResponseMessageAndData<String> registerArchitect(@Valid @RequestBody RegisterUserRequest request) {
-        log.info("Auth Controller : registerArchitect");
-        String message = authService.registerUser(request);
-
-        ApiResponseMessageAndData<String> response = new ApiResponseMessageAndData<>();
-        response.setCode(HttpStatus.CREATED.value());
-        response.setStatus(HttpStatus.CREATED.name());
-        response.setMessage("Verification code sent to " + request.getEmail());
-        response.setData(message);
-
-        return response;
-    }
-
 }
