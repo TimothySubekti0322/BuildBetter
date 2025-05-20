@@ -110,6 +110,9 @@ public class ArchitectService {
                 existingArchitect.setPortfolio(
                                 request.getPortfolio() != null ? request.getPortfolio()
                                                 : existingArchitect.getPortfolio());
+
+                log.info("Architect Service : Saving architect to DB");
+                architectRepository.save(existingArchitect);
         }
 
         public List<Architect> getAllArchitects() {
