@@ -1,6 +1,7 @@
 package com.buildbetter.consult.service;
 
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
@@ -43,10 +44,15 @@ public class ArchitectService {
                 Integer rateOnline = 30000;
                 Integer rateOffline = 100000;
 
+                // TODO: OMIT THIS CODE BELOW IF REGISTER ARCHITECT IS FINISHED
+                String portfolio = "https://issuu.com/erensaratu/docs/architecture_portfolio_by_erensa_ratu_chelsia";
+                Random random = new Random();
+                Float experience = (float) random.nextInt(15) + 1;
+
                 Architect architect = Architect.builder().email(request.getEmail()).username(request.getUsername())
                                 .province(request.getProvince()).city(request.getCity()).password(hashedPassword)
                                 .rateOnline(rateOnline)
-                                .rateOffline(rateOffline).build();
+                                .rateOffline(rateOffline).portfolio(portfolio).experience(experience).build();
 
                 log.info("Architect Service : Saving architect to DB");
                 architectRepository.save(architect);

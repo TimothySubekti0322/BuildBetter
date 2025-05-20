@@ -3,8 +3,8 @@ package com.buildbetter.user.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +19,7 @@ import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.OtpRepository;
 import com.buildbetter.user.repository.UserRepository;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -108,13 +109,56 @@ public class OtpService {
         log.info("Otp Service : sendOtpToEmail");
         try {
             log.info("Otp Service : Constructing OTP email message");
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject("Your OTP Code");
-            message.setText("Your OTP code is: " + otpCode);
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject("🔒 Verify your email address");
+
+            String message = """
+                    <body style="font-family: Arial, sans-serif">
+                        <div
+                        style="padding: 40px 50px; background-color: #30534b; border-radius: 36px"
+                        >
+                            <div
+                                style="
+                                text-align: center;
+                                background-color: #eece7c;
+                                border-radius: 36px;
+                                padding: 20px;
+                                "
+                            >
+                                <h1 style="color: #1d322d">Verify Your Email</h1>
+                                <p>
+                                Please enter this OTP code below in the BuildBetter app to verify your
+                                email address:
+                                </p>
+                                <p
+                                style="
+                                    text-align: center;
+                                    padding: 16px 24px;
+                                    background-color: #3f473d;
+                                    color: #cae1db;
+                                    font-weight: 600;
+                                    font-size: 1.6rem;
+                                    margin: 8px auto;
+                                    border-radius: 8px;
+                                    width: fit-content;
+                                "
+                                >
+                                %s %s %s %s %s %s
+                                </p>
+                            </div>
+                        </div>
+                    </body>
+                    """
+                    .formatted(otpCode.charAt(0), otpCode.charAt(1), otpCode.charAt(2), otpCode.charAt(3),
+                            otpCode.charAt(4), otpCode.charAt(5));
+
+            helper.setText(message, true);
 
             log.info("Otp Service : Sending email to " + to);
-            mailSender.send(message);
+            mailSender.send(mimeMessage);
         } catch (Exception e) {
             throw new InternalServerErrorException("Failed to send OTP email: " + e.getMessage());
         }

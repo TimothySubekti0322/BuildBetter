@@ -1,10 +1,17 @@
 package com.buildbetter.user.controller;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
@@ -18,7 +25,7 @@ import com.buildbetter.user.dto.auth.ResetPasswordRequest;
 import com.buildbetter.user.dto.auth.SendOTPRequest;
 import com.buildbetter.user.dto.auth.VerifiedUserRequest;
 import com.buildbetter.user.service.AuthService;
-import com.buildbetter.user.service.ForgotPassword;
+import com.buildbetter.user.service.ForgotPasswordService;
 import com.buildbetter.user.service.OtpService;
 
 import jakarta.validation.Valid;
@@ -33,7 +40,7 @@ public class AuthController {
 
     private final OtpService otpService;
     private final AuthService authService;
-    private final ForgotPassword forgotPassword;
+    private final ForgotPasswordService forgotPassword;
 
     @GetMapping("/ping")
     public ApiResponseMessageOnly getHello() {
@@ -42,6 +49,50 @@ public class AuthController {
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Hello from Auth Controller");
         return response;
+    }
+
+    @GetMapping("/reset-password-redirect")
+    public ResponseEntity<String> landingPage(
+            @RequestParam String token,
+            @RequestParam String email) {
+
+        String appUrl = String.format(
+                "myapp://update-password?token=%s&email=%s",
+                URLEncoder.encode(token, StandardCharsets.UTF_8),
+                URLEncoder.encode(email, StandardCharsets.UTF_8));
+        String downloadUrl = "https://play.google.com/store/apps/details?id=com.buildbetter";
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <title>Opening App…</title>
+                  <script>
+                    // 1. try to open the app
+                    window.location = "%1$s";
+                    // 2. if still here after 2s, show fallback UI
+                    setTimeout(function() {
+                      document.getElementById('fallback').style.display = 'block';
+                    }, 2000);
+                  </script>
+                  <style>
+                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                    #fallback { display: none; margin-top: 20px; }
+                  </style>
+                </head>
+                <body>
+                  <h1>Opening in your app…</h1>
+                  <div id="fallback">
+                    <p>If nothing happened, <a href="%2$s" target="_blank">download the app</a> or <a href="%1$s">try again</a>.</p>
+                  </div>
+                </body>
+                </html>
+                """
+                .formatted(appUrl, downloadUrl);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_HTML);
+        return new ResponseEntity<>(html, headers, HttpStatus.OK);
     }
 
     @PostMapping("/register")
