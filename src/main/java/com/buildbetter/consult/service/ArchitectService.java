@@ -49,10 +49,22 @@ public class ArchitectService {
                 Random random = new Random();
                 Float experience = (float) random.nextInt(15) + 1;
 
+                // Build Random Phone Number
+                StringBuilder phoneNumber = new StringBuilder("+62");
+                phoneNumber.append("8");
+                int numberOfRemainingDigits = 9;
+
+                for (int i = 0; i < numberOfRemainingDigits; i++) {
+                        phoneNumber.append(random.nextInt(10)); // Appends a random digit (0-9)
+                }
+
+                String randomIndonesianPhoneNumber = phoneNumber.toString();
+
                 Architect architect = Architect.builder().email(request.getEmail()).username(request.getUsername())
                                 .province(request.getProvince()).city(request.getCity()).password(hashedPassword)
                                 .rateOnline(rateOnline)
-                                .rateOffline(rateOffline).portfolio(portfolio).experience(experience).build();
+                                .rateOffline(rateOffline).portfolio(portfolio).experience(experience)
+                                .phoneNumber(randomIndonesianPhoneNumber).build();
 
                 log.info("Architect Service : Saving architect to DB");
                 architectRepository.save(architect);
@@ -89,8 +101,6 @@ public class ArchitectService {
                         throw new BadRequestException("Architect not found");
                 });
 
-                existingArchitect.setEmail(
-                                request.getEmail() != null ? request.getEmail() : existingArchitect.getEmail());
                 existingArchitect.setUsername(
                                 request.getUsername() != null ? request.getUsername()
                                                 : existingArchitect.getUsername());
@@ -116,6 +126,12 @@ public class ArchitectService {
                 existingArchitect.setPortfolio(
                                 request.getPortfolio() != null ? request.getPortfolio()
                                                 : existingArchitect.getPortfolio());
+
+                if (request.getPassword() != null) {
+                        log.info("Architect Service : Hashing password");
+                        String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
+                        existingArchitect.setPassword(hashedPassword);
+                }
 
                 log.info("Architect Service : Saving architect to DB");
                 architectRepository.save(existingArchitect);

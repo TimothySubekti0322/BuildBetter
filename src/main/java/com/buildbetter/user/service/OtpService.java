@@ -113,25 +113,24 @@ public class OtpService {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
 
             helper.setTo(to);
-            helper.setSubject("🔒 Verify your email address");
+            helper.setSubject("🔒 Verifikasi Alamat Email");
 
             String message = """
                     <body style="font-family: Arial, sans-serif">
                         <div
-                        style="padding: 40px 50px; background-color: #30534b; border-radius: 36px"
+                        style="padding: 40px 40px; background-color: #30534b; border-radius: 36px"
                         >
                             <div
                                 style="
                                 text-align: center;
-                                background-color: #eece7c;
+                                background-color: #cae1db;
                                 border-radius: 36px;
                                 padding: 20px;
                                 "
                             >
-                                <h1 style="color: #1d322d">Verify Your Email</h1>
-                                <p>
-                                Please enter this OTP code below in the BuildBetter app to verify your
-                                email address:
+                                <h1 style="color: #1d322d">Verifikasi Email</h1>
+                                <p style="color:#3f473d;">
+                                Mohon masukkan kode OTP berikut kedalam aplikasi BuildBetter untuk memverifikasi alamat email Anda.
                                 </p>
                                 <p
                                 style="

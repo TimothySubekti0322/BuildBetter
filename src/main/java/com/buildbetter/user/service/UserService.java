@@ -54,8 +54,6 @@ public class UserService {
 
         existingUser.setPhoneNumber(
                 request.getPhoneNumber() != null ? request.getPhoneNumber() : existingUser.getPhoneNumber());
-        existingUser.setEmail(
-                request.getEmail() != null ? request.getEmail() : existingUser.getEmail());
         existingUser.setUsername(
                 request.getUsername() != null ? request.getUsername() : existingUser.getUsername());
         existingUser.setProvince(

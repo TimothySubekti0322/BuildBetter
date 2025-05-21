@@ -101,22 +101,22 @@ public class ForgotPasswordService {
       MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, false, "UTF-8");
 
       helper.setTo(to);
-      helper.setSubject("🔒 Reset your password");
+      helper.setSubject("🔒 Atur ulang Kata Sandi");
 
       String html = """
             <html>
               <body style="font-family:Arial,sans-serif">
-                <div style="padding:40px 50px;background-color:#30534b;border-radius:36px;">
+                <div style="padding:40px 40px;background-color:#30534b;border-radius:36px;">
                   <div
                     style="
                       text-align:center;
-                      background-color:#eece7c;
+                      background-color:#cae1db;
                       border-radius:36px;
                       padding:20px;
                     "
                   >
-                    <h1 style="color:#1d322d;">Reset Your Password</h1>
-                    <p>Click the button below to choose a new password:</p>
+                    <h1 style="color:#1d322d;">Atur Ulang Kata Sandi</h1>
+                    <p style="color:#3f473d;">Klik tombol di bawah ini untuk mengatur ulang kata sandi Anda.</p>
                     <p style="text-align:center;">
                       <a
                         href="https://build-better.site/api/v1/reset-password-redirect?token=%s&email=%s"
@@ -130,11 +130,11 @@ public class ForgotPasswordService {
                           margin:4px 0px;
                         "
                       >
-                        Reset Password
+                        Atur Ulang Kata Sandi
                       </a>
                     </p>
-                    <p style="font-size:1rem;color:#EE7766;margin:6px 0px">
-                      If you didn’t request a password reset, just ignore this email.
+                    <p style="color:#33a182;margin:6px 0px">
+                      Jika Anda merasa tidak mengajukan permohonan pengaturan ulang kata sandi, mohon abaikan email ini.
                     </p>
                   </div>
                 </div>

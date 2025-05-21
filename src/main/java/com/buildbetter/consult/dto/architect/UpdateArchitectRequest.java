@@ -6,7 +6,7 @@ import lombok.Data;
 
 @Data
 public class UpdateArchitectRequest {
-    private String email;
+
     private String username;
     private String province;
     private String city;
@@ -24,5 +24,7 @@ public class UpdateArchitectRequest {
     @Min(value = 0, message = "Field 'rateOffline' must be greater than or equal to 0")
     private Integer rateOffline;
     private String portfolio;
+
+    private String password;
 
 }
