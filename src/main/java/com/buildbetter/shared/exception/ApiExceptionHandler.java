@@ -13,7 +13,7 @@ import com.buildbetter.shared.dto.ErrorResponse;
 @RestControllerAdvice(basePackages = {
                 "com.buildbetter.user",
                 "com.buildbetter.plan",
-                "com.buildbetter.consult",
+                "com.buildbetter.consultation",
 })
 public class ApiExceptionHandler {
 

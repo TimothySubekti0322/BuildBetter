@@ -42,7 +42,7 @@ public class MaterialService {
 
                 // Upload the image to S3 and get the URL
                 log.info("Material Service : addMaterial - Upload File to S3");
-                String imageUrl = s3Service.uploadFile(request.getImage(), folder);
+                String imageUrl = s3Service.uploadFile(request.getImage(), folder, "");
 
                 Material material = Material.builder()
                                 .name(request.getName())
@@ -132,7 +132,7 @@ public class MaterialService {
 
                         log.info("Material Service : updateMaterial - Upload File to S3");
                         String folder = S3Folder.MATERIALS + request.getCategory() + "/";
-                        String imageUrl = s3Service.uploadFile(request.getImage(), folder);
+                        String imageUrl = s3Service.uploadFile(request.getImage(), folder, "");
 
                         // Delete the old image from S3
                         log.info("Material Service : updateMaterial - Delete old image from S3");

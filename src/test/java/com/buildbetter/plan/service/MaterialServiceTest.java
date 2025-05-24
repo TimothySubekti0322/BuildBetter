@@ -67,14 +67,14 @@ class MaterialServiceTest {
 
         // stub S3 upload
         String expectedFolder = S3Folder.MATERIALS + "Building" + "/" + "Roof" + "/";
-        when(s3Service.uploadFile(image, expectedFolder))
+        when(s3Service.uploadFile(image, expectedFolder, ""))
                 .thenReturn("https://s3/build_better/materials/Building/Roof/tile.png");
 
         // when
         materialService.addMaterial(req);
 
         // then: verify S3 upload called with correct folder
-        verify(s3Service).uploadFile(image, expectedFolder);
+        verify(s3Service).uploadFile(image, expectedFolder, "");
 
         // capture saved Material
         ArgumentCaptor<Material> captor = ArgumentCaptor.forClass(Material.class);
@@ -282,7 +282,7 @@ class MaterialServiceTest {
 
         // stub S3 upload
         String expectedFolder = S3Folder.MATERIALS + "NewCat" + "/";
-        when(s3Service.uploadFile(newImage, expectedFolder)).thenReturn("new-url.png");
+        when(s3Service.uploadFile(newImage, expectedFolder, "")).thenReturn("new-url.png");
 
         // stub mapper
         MaterialResponse expectedDto = new MaterialResponse();
@@ -294,7 +294,7 @@ class MaterialServiceTest {
             MaterialResponse actual = materialService.updateMaterial(id, req);
 
             // verify S3 interactions
-            verify(s3Service).uploadFile(newImage, expectedFolder);
+            verify(s3Service).uploadFile(newImage, expectedFolder, "");
             verify(s3Service).deleteFile("old-url.png");
 
             // verify repository save
@@ -339,7 +339,7 @@ class MaterialServiceTest {
             MaterialResponse actual = materialService.updateMaterial(id, req);
 
             // no S3 uploads/deletes
-            verify(s3Service, never()).uploadFile(any(), any());
+            verify(s3Service, never()).uploadFile(any(), any(), any());
             verify(s3Service, never()).deleteFile(any());
 
             // save and field updates

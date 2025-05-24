@@ -91,7 +91,7 @@ public class SuggestionService {
 
             log.info("Suggestion Service : uploadFloorPlans - Upload File " + floorplan.getOriginalFilename()
                     + " to S3");
-            String imageUrl = s3Service.uploadFile(floorplan, folder);
+            String imageUrl = s3Service.uploadFile(floorplan, folder, "");
             floorPlansList.add(imageUrl);
         }
 
@@ -119,7 +119,7 @@ public class SuggestionService {
         // Upload House Image Object
         log.info("Suggestion Service : uploadHouseFile - Upload File " + request.getFile().getOriginalFilename()
                 + " to S3");
-        String houseImageObjectUrl = s3Service.uploadFile(request.getFile(), folder);
+        String houseImageObjectUrl = s3Service.uploadFile(request.getFile(), folder, "");
 
         log.info("Suggestion Service : uploadHouseFile - Convert HouseFileType into enum");
         HouseFileType houseFileType = HouseFileType.fromValueIgnoreCase(request.getType());

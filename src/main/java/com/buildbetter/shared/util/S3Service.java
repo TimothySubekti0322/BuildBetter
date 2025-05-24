@@ -25,8 +25,9 @@ public class S3Service {
 
     private final S3Properties s3Properties;
 
-    public String uploadFile(MultipartFile file, String folder) {
-        String uniqueFileName = folder + UUID.randomUUID() + "_" + file.getOriginalFilename();
+    public String uploadFile(MultipartFile file, String folder, String prefix) {
+        String uniqueFileName = folder + ((prefix == null || prefix.isBlank()) ? UUID.randomUUID() : prefix) + "_"
+                + file.getOriginalFilename();
         try {
             S3Client s3 = createS3Client();
             s3.putObject(
