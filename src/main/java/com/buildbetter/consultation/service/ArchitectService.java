@@ -14,8 +14,10 @@ import com.buildbetter.consultation.dto.architect.UpdateArchitectRequest;
 import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.repository.ArchitectRepository;
 import com.buildbetter.consultation.util.ArchitectUtils;
+import com.buildbetter.shared.constant.S3Folder;
 import com.buildbetter.shared.exception.BadRequestException;
 import com.buildbetter.shared.util.JwtUtil;
+import com.buildbetter.shared.util.S3Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +29,7 @@ public class ArchitectService {
 
         private final ArchitectRepository architectRepository;
         private final JwtUtil jwtUtil;
+        private final S3Service s3Service;
 
         public void registerArchitect(RegisterArchitectRequest request) {
                 log.info("Architect Service : registerArchitect");
@@ -90,6 +93,7 @@ public class ArchitectService {
                 loginResponse.setEmail(architect.getEmail());
                 loginResponse.setToken(token);
                 loginResponse.setUserId(architect.getId());
+                loginResponse.setUsername(architect.getUsername());
 
                 return loginResponse;
         }
@@ -101,6 +105,22 @@ public class ArchitectService {
                         throw new BadRequestException("Architect not found");
                 });
 
+                // Update photo profile
+                if (request.getPhoto() != null) {
+                        log.info("Architect Service : Uploading photo to S3");
+                        String folder = S3Folder.CONSULTATIONS + "profile-photos/";
+                        String photoUrl = s3Service.uploadFile(request.getPhoto(), folder,
+                                        existingArchitect.getId().toString());
+
+                        // Delete the old photo from S3 if it exists
+                        if (existingArchitect.getPhoto() != null && !existingArchitect.getPhoto().isBlank()) {
+                                log.info("Architect Service : Deleting old photo from S3");
+                                s3Service.deleteFile(existingArchitect.getPhoto());
+                        }
+
+                        existingArchitect.setPhoto(photoUrl);
+                }
+
                 existingArchitect.setUsername(
                                 request.getUsername() != null ? request.getUsername()
                                                 : existingArchitect.getUsername());
@@ -109,8 +129,6 @@ public class ArchitectService {
                                                 : existingArchitect.getProvince());
                 existingArchitect.setCity(
                                 request.getCity() != null ? request.getCity() : existingArchitect.getCity());
-                existingArchitect.setPhoto(
-                                request.getPhoto() != null ? request.getPhoto() : existingArchitect.getPhoto());
                 existingArchitect.setPhoneNumber(
                                 request.getPhoneNumber() != null ? request.getPhoneNumber()
                                                 : existingArchitect.getPhoneNumber());

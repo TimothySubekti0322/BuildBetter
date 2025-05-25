@@ -15,4 +15,5 @@ public class LoginResponse {
     private String token;
     private UUID userId;
     private String email;
+    private String username;
 }
