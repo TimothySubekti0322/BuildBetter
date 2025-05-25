@@ -21,6 +21,7 @@ import com.buildbetter.consultation.dto.architect.LoginRequest;
 import com.buildbetter.consultation.dto.architect.LoginResponse;
 import com.buildbetter.consultation.dto.architect.RegisterArchitectRequest;
 import com.buildbetter.consultation.dto.architect.UpdateArchitectRequest;
+import com.buildbetter.consultation.dto.consultation.Schedule;
 import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.service.ArchitectService;
@@ -29,6 +30,7 @@ import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
 import com.buildbetter.shared.security.JwtAuthentication;
 import com.buildbetter.shared.security.annotation.IsAdmin;
+import com.buildbetter.shared.security.annotation.IsAdminOrArchitect;
 import com.buildbetter.shared.security.annotation.IsArchitect;
 
 import jakarta.validation.Valid;
@@ -156,7 +158,7 @@ public class ArchitectController {
     }
 
     @GetMapping("/{id}/consultations")
-    @IsAdmin
+    @IsAdminOrArchitect
     public ApiResponseWithData<List<Consultation>> getAllArchitectConsults(@PathVariable UUID id,
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "status", required = false) String status,
@@ -172,6 +174,20 @@ public class ArchitectController {
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(consults);
+        return response;
+    }
+
+    @GetMapping("/{id}/schedules")
+    public ApiResponseWithData<List<Schedule>> getArchitectSchedules(@PathVariable UUID id) {
+        log.info("Consult Controller : getArchitectSchedules");
+
+        List<Schedule> schedules = consultationService.getArchitectSchedules(id);
+
+        ApiResponseWithData<List<Schedule>> response = new ApiResponseWithData<>();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setData(schedules);
+
         return response;
     }
 

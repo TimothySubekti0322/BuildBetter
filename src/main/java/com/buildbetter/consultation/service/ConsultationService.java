@@ -173,4 +173,43 @@ public class ConsultationService {
         return consultationRepository.findById(consultId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
     }
+
+    public List<Consultation> getUserConsultations(UUID userId, String type, String status,
+            Boolean includeCancelled, Boolean upcoming) {
+        // Get base dataset
+        List<Consultation> consults;
+
+        if (upcoming != null && upcoming) {
+            consults = consultationRepository
+                    .findByUserIdAndStartDateGreaterThanEqualOrderByStartDate(userId, LocalDateTime.now());
+        } else {
+            consults = consultationRepository.findByUserIdOrderByStartDate(userId);
+        }
+
+        // Apply filters using streams
+        return consults.stream()
+                .filter(consult -> {
+                    // Filter by type if specified
+                    if (type != null && !type.trim().isEmpty()) {
+                        return type.equalsIgnoreCase(consult.getType());
+                    }
+                    return true;
+                })
+                .filter(consult -> {
+                    // Filter by status if specified
+                    if (status != null && !status.trim().isEmpty()) {
+                        return status.equalsIgnoreCase(consult.getStatus());
+                    }
+                    return true;
+                })
+                .filter(consult -> {
+                    // Filter out cancelled consults unless explicitly included
+                    if (includeCancelled != null && !includeCancelled) {
+                        return !"CANCELLED".equalsIgnoreCase(consult.getStatus());
+                    }
+                    // If includeCancelled is null or true, include all statuses
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
 }

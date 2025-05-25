@@ -34,6 +34,8 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
       LocalDateTime from,
       String statusNot);
 
+  List<Consultation> findByStatus(String status);
+
   List<Consultation> findByStatusNot(String status);
 
   List<Consultation> findByStatusNotOrderByStartDate(String status);
@@ -42,11 +44,14 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
       String statusNot,
       LocalDateTime from);
 
-  List<Consultation> findByStatus(String status);
-
   List<Consultation> findByArchitectId(UUID architectId);
 
   List<Consultation> findByArchitectIdOrderByStartDate(UUID architectId);
 
   List<Consultation> findByStartDateGreaterThanEqualOrderByStartDate(LocalDateTime from);
+
+  List<Consultation> findByUserIdAndStartDateGreaterThanEqualOrderByStartDate(UUID userId, LocalDateTime from);
+
+  List<Consultation> findByUserIdOrderByStartDate(UUID userId);
+
 }

@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
-import com.buildbetter.consultation.dto.consultation.Schedule;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.service.ConsultationService;
@@ -24,6 +23,7 @@ import com.buildbetter.shared.dto.ApiResponseWithData;
 import com.buildbetter.shared.security.JwtAuthentication;
 import com.buildbetter.shared.security.annotation.Authenticated;
 import com.buildbetter.shared.security.annotation.IsAdmin;
+import com.buildbetter.shared.security.annotation.IsAdminOrUser;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,14 +31,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/consultations")
+@RequestMapping("/api/v1")
 @Slf4j
 public class ConsultationController {
 
     private final ConsultationService consultationService;
     private final PaymentService paymentService;
 
-    @PostMapping("")
+    @PostMapping("/consultations")
     @Authenticated
     public ApiResponseMessageAndData<UUID> createConsults(Authentication auth,
             @Valid @RequestBody CreateConsultationRequest request) {
@@ -60,23 +60,24 @@ public class ConsultationController {
         return response;
     }
 
-    @GetMapping("/{id}/schedules")
-    public ApiResponseWithData<List<Schedule>> getArchitectSchedules(@PathVariable UUID id) {
-        log.info("Consult Controller : getArchitectSchedules");
+    // @GetMapping("/consultations/{id}/schedules")
+    // public ApiResponseWithData<List<Schedule>>
+    // getArchitectSchedules(@PathVariable UUID id) {
+    // log.info("Consult Controller : getArchitectSchedules");
 
-        List<Schedule> schedules = consultationService.getArchitectSchedules(id);
+    // List<Schedule> schedules = consultationService.getArchitectSchedules(id);
 
-        ApiResponseWithData<List<Schedule>> response = new ApiResponseWithData<>();
-        response.setCode(HttpStatus.OK.value());
-        response.setStatus(HttpStatus.OK.name());
-        response.setData(schedules);
+    // ApiResponseWithData<List<Schedule>> response = new ApiResponseWithData<>();
+    // response.setCode(HttpStatus.OK.value());
+    // response.setStatus(HttpStatus.OK.name());
+    // response.setData(schedules);
 
-        return response;
-    }
+    // return response;
+    // }
 
-    @GetMapping("")
+    @GetMapping("/consultations")
     @IsAdmin
-    public ApiResponseWithData<List<Consultation>> getAllConsults(
+    public ApiResponseWithData<List<Consultation>> getAllConsultations(
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "includeCancelled", required = false) Boolean includeCancelled,
@@ -92,8 +93,8 @@ public class ConsultationController {
         return response;
     }
 
-    @GetMapping("/{id}")
-    public ApiResponseWithData<Consultation> getConsultById(@PathVariable UUID id) {
+    @GetMapping("/consultations/{id}")
+    public ApiResponseWithData<Consultation> getConsultationById(@PathVariable UUID id) {
         log.info("Consult Controller : getConsultById");
 
         Consultation consult = consultationService.getConsultById(id);
@@ -106,7 +107,7 @@ public class ConsultationController {
         return response;
     }
 
-    @GetMapping("/{consultationId}/payments")
+    @GetMapping("/consultations/{consultationId}/payments")
     public ApiResponseMessageAndData<Payment> getConsultationPayment(@PathVariable UUID consultationId) {
         log.info("Consult Controller : getConsultationPayment");
 
@@ -121,4 +122,28 @@ public class ConsultationController {
         return response;
     }
 
+    @GetMapping("/users/consultations")
+    @IsAdminOrUser
+    public ApiResponseWithData<List<Consultation>> getUserConsults(
+            Authentication auth,
+            @RequestParam(value = "type", required = false) String type,
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "includeCancelled", required = false) Boolean includeCancelled,
+            @RequestParam(value = "upcoming", required = false) Boolean upcoming) {
+        log.info("Consult Controller : getUserConsults");
+
+        log.info("Consult Controller : getUserConsults - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
+
+        List<Consultation> consults = consultationService.getUserConsultations(userId, type, status, includeCancelled,
+                upcoming);
+
+        ApiResponseWithData<List<Consultation>> response = new ApiResponseWithData<>();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setData(consults);
+
+        return response;
+    }
 }
