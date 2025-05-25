@@ -14,4 +14,6 @@ public interface ArchitectRepository extends JpaRepository<Architect, UUID> {
     Optional<Architect> findByEmail(String email);
 
     List<Architect> findByCity(String city);
+
+    List<Architect> findAllByIdNotIn(List<UUID> ids);
 }

@@ -14,11 +14,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
+import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.service.ConsultationService;
 import com.buildbetter.consultation.service.PaymentService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
+import com.buildbetter.shared.dto.ApiResponseMessageOnly;
 import com.buildbetter.shared.dto.ApiResponseWithData;
 import com.buildbetter.shared.security.JwtAuthentication;
 import com.buildbetter.shared.security.annotation.Authenticated;
@@ -143,6 +145,37 @@ public class ConsultationController {
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(consults);
+
+        return response;
+    }
+
+    @PostMapping("/consultations/{consultationId}/approve")
+    @IsAdmin
+    public ApiResponseMessageOnly approveConsultation(@PathVariable UUID consultationId) {
+        log.info("Consult Controller : approveConsultation");
+
+        consultationService.approveConsultation(consultationId);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Consultation approved successfully");
+
+        return response;
+    }
+
+    @PostMapping("/consultations/{consultationId}/reject")
+    @IsAdmin
+    public ApiResponseMessageOnly rejectConsultation(@PathVariable UUID consultationId,
+            @Valid @RequestBody RejectConsultationRequest request) {
+        log.info("Consult Controller : approveConsultation");
+
+        consultationService.rejectConsultation(consultationId, request);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Consultation rejected successfully");
 
         return response;
     }

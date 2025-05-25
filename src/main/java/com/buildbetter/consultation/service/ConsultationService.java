@@ -8,11 +8,16 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.buildbetter.consultation.constant.CancellationReason;
+import com.buildbetter.consultation.constant.ConsultationStatus;
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
+import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.Schedule;
+import com.buildbetter.consultation.dto.room.CreateRoomRequest;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.repository.ConsultationRepository;
 import com.buildbetter.consultation.util.ConsultationUtils;
+import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.exception.BadRequestException;
 
 import lombok.RequiredArgsConstructor;
@@ -24,14 +29,36 @@ import lombok.extern.slf4j.Slf4j;
 public class ConsultationService {
 
     private final ConsultationRepository consultationRepository;
+    private final ConfirmationService confirmationService;
+    private final RoomService roomService;
 
     public UUID createConsult(CreateConsultationRequest request, UUID userId) {
         LocalDateTime now = LocalDateTime.now();
+
+        List<String> active = List.of(
+                ConsultationStatus.SCHEDULED.getStatus(),
+                ConsultationStatus.IN_PROGRESS.getStatus());
+
+        // 1) Fast-fail if *this* user already has one
+        if (consultationRepository.existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
+                request.getArchitectId(),
+                userId,
+                active,
+                now)) {
+            throw new BadRequestException(
+                    "You already have an active (scheduled or in-progress) booking with this architect.");
+        }
+
         List<Consultation> upcoming = consultationRepository
                 .findByArchitectIdAndStartDateGreaterThanEqualAndStatusNotOrderByStartDate(request.getArchitectId(),
                         now, "cancelled");
 
         log.info("Upcoming Consults: {}", upcoming);
+
+        // Check wheter there is upcoming booking between user and architect
+        if (upcoming.stream().anyMatch(consult -> consult.getUserId().equals(userId))) {
+            throw new BadRequestException("You already have an active booking with this architect.");
+        }
 
         LocalDateTime newStart = request.getStartDate();
         LocalDateTime newEnd = request.getEndDate();
@@ -169,6 +196,19 @@ public class ConsultationService {
                 .collect(Collectors.toList());
     }
 
+    public List<UUID> getAllContactedArchitects(UUID userId) {
+
+        // Filter The consultation must be in a status "scheduled" and "in-progress"
+        List<String> activeStatuses = List.of(
+                ConsultationStatus.SCHEDULED.getStatus(),
+                ConsultationStatus.IN_PROGRESS.getStatus());
+
+        List<UUID> consultations = consultationRepository.findDistinctArchitectIdByUserIdAndStatusIn(userId,
+                activeStatuses);
+
+        return consultations;
+    }
+
     public Consultation getConsultById(UUID consultId) {
         return consultationRepository.findById(consultId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
@@ -211,5 +251,42 @@ public class ConsultationService {
                     return true;
                 })
                 .collect(Collectors.toList());
+    }
+
+    public void approveConsultation(UUID consultationId) {
+
+        Consultation consult = consultationRepository.findById(consultationId)
+                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        CreateRoomRequest createRoomRequest = new CreateRoomRequest(
+                consult.getArchitectId(), consult.getUserId(), consult.getStartDate(), consult.getEndDate());
+        roomService.createRoom(createRoomRequest);
+
+        consult.setStatus(ConsultationStatus.SCHEDULED.getStatus());
+        consultationRepository.save(consult);
+
+        confirmationService.notifyApproved(consultationId.toString());
+    }
+
+    public void rejectConsultation(UUID consultationId, RejectConsultationRequest reason) {
+
+        Consultation consultation = consultationRepository.findById(consultationId)
+                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        CancellationReason reasonMessage = CancellationReason.fromString(reason.getMessage());
+
+        Boolean consultationIsWaitingForConfirmationOrConsultationIsCancelled = consultation.getStatus()
+                .equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus()) ||
+                consultation.getStatus().equals(ConsultationStatus.CANCELLED.getStatus());
+
+        if (!consultationIsWaitingForConfirmationOrConsultationIsCancelled) {
+            throw new BadRequestException("Consultation is not in a state that can be cancelled");
+        }
+
+        consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
+        consultation.setReason(reason.getMessage());
+        consultationRepository.save(consultation);
+
+        confirmationService.notifyRejected(consultationId.toString(), reasonMessage);
     }
 }

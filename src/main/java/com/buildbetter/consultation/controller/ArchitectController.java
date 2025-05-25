@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.buildbetter.consultation.dto.architect.ArchitectResponse;
+import com.buildbetter.consultation.dto.architect.ChangeArchitectPasswordRequest;
 import com.buildbetter.consultation.dto.architect.LoginRequest;
 import com.buildbetter.consultation.dto.architect.LoginResponse;
 import com.buildbetter.consultation.dto.architect.RegisterArchitectRequest;
@@ -31,6 +33,7 @@ import com.buildbetter.shared.dto.ApiResponseWithData;
 import com.buildbetter.shared.security.JwtAuthentication;
 import com.buildbetter.shared.security.annotation.IsAdmin;
 import com.buildbetter.shared.security.annotation.IsAdminOrArchitect;
+import com.buildbetter.shared.security.annotation.IsAdminOrUser;
 import com.buildbetter.shared.security.annotation.IsArchitect;
 
 import jakarta.validation.Valid;
@@ -93,14 +96,39 @@ public class ArchitectController {
         return response;
     }
 
+    @PatchMapping("/change-password")
+    @IsArchitect
+    public ApiResponseMessageOnly changeArchitectPassword(Authentication auth,
+            @RequestBody @Valid ChangeArchitectPasswordRequest request) {
+        log.info("Architect Controller : changeArchitectPassword");
+
+        log.info("Architect Controller : changeArchitectPassword - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID architectId = UUID.fromString(jwt.claim("id"));
+
+        architectService.changePassword(architectId, request);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Architect password changed successfully");
+        return response;
+    }
+
     @GetMapping("")
-    @IsAdmin
-    public ApiResponseWithData<List<Architect>> getAllArchitects() {
+    @IsAdminOrUser
+    public ApiResponseWithData<List<ArchitectResponse>> getAllArchitects(
+            Authentication auth,
+            @RequestParam(value = "notContacted", required = false, defaultValue = "false") boolean notContacted) {
         log.info("Architect Controller : getAllArchitects");
 
-        List<Architect> architects = architectService.getAllArchitects();
+        log.info("Architect Controller : getAllArchitects - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
 
-        ApiResponseWithData<List<Architect>> response = new ApiResponseWithData<>();
+        List<ArchitectResponse> architects = architectService.getAllArchitects(userId, notContacted);
+
+        ApiResponseWithData<List<ArchitectResponse>> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(architects);

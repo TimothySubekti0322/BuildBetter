@@ -31,7 +31,4 @@ public class UpdateArchitectRequest {
     @Min(value = 0, message = "Field 'rateOffline' must be greater than or equal to 0")
     Integer rateOffline;
     String portfolio;
-
-    String password;
-
 }

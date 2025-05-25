@@ -3,10 +3,13 @@ package com.buildbetter.consultation.service;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
+import com.buildbetter.consultation.dto.architect.ArchitectResponse;
+import com.buildbetter.consultation.dto.architect.ChangeArchitectPasswordRequest;
 import com.buildbetter.consultation.dto.architect.LoginRequest;
 import com.buildbetter.consultation.dto.architect.LoginResponse;
 import com.buildbetter.consultation.dto.architect.RegisterArchitectRequest;
@@ -28,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ArchitectService {
 
         private final ArchitectRepository architectRepository;
+        private final ConsultationService consultationService;
         private final JwtUtil jwtUtil;
         private final S3Service s3Service;
 
@@ -145,19 +149,47 @@ public class ArchitectService {
                                 request.getPortfolio() != null ? request.getPortfolio()
                                                 : existingArchitect.getPortfolio());
 
-                if (request.getPassword() != null) {
-                        log.info("Architect Service : Hashing password");
-                        String hashedPassword = BCrypt.hashpw(request.getPassword(), BCrypt.gensalt());
-                        existingArchitect.setPassword(hashedPassword);
-                }
-
                 log.info("Architect Service : Saving architect to DB");
                 architectRepository.save(existingArchitect);
         }
 
-        public List<Architect> getAllArchitects() {
+        public void changePassword(UUID architectId, ChangeArchitectPasswordRequest request) {
+                log.info("Architect Service : changePassword");
+                Architect existingArchitect = architectRepository.findById(architectId).orElseThrow(() -> {
+                        throw new BadRequestException("Architect not found");
+                });
+
+                log.info("Architect Service : Checking old password");
+                if (!BCrypt.checkpw(request.getOldPassword(), existingArchitect.getPassword())) {
+                        throw new BadRequestException("Invalid old password");
+                }
+
+                if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+                        throw new BadRequestException("New password and confirm password do not match");
+                }
+
+                log.info("Architect Service : Hashing new password");
+                String hashedPassword = BCrypt.hashpw(request.getNewPassword(), BCrypt.gensalt());
+                existingArchitect.setPassword(hashedPassword);
+
+                log.info("Architect Service : Saving new password to DB");
+                architectRepository.save(existingArchitect);
+        }
+
+        public List<ArchitectResponse> getAllArchitects(UUID userId, Boolean notContacted) {
                 log.info("Fetching all architects");
-                return architectRepository.findAll();
+
+                List<Architect> architects;
+                if (Boolean.TRUE.equals(notContacted) && userId != null) {
+                        List<UUID> contacted = consultationService.getAllContactedArchitects(userId);
+                        architects = architectRepository.findAllByIdNotIn(contacted);
+                } else {
+                        architects = architectRepository.findAll();
+                }
+
+                return architects.stream()
+                                .map(ArchitectUtils::mapToArchitectResponse)
+                                .collect(Collectors.toList());
         }
 
         public Architect getArchitectById(UUID id) {

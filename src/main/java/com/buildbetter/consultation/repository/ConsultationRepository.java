@@ -1,6 +1,7 @@
 package com.buildbetter.consultation.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,5 +54,21 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
   List<Consultation> findByUserIdAndStartDateGreaterThanEqualOrderByStartDate(UUID userId, LocalDateTime from);
 
   List<Consultation> findByUserIdOrderByStartDate(UUID userId);
+
+  boolean existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
+      UUID architectId,
+      UUID userId,
+      Collection<String> statuses,
+      LocalDateTime now);
+
+  @Query("""
+        SELECT DISTINCT c.architectId
+        FROM Consultation c
+        WHERE c.userId   = :userId
+          AND c.status  IN :statuses
+      """)
+  List<UUID> findDistinctArchitectIdByUserIdAndStatusIn(
+      UUID userId,
+      Collection<String> statuses);
 
 }
