@@ -1,0 +1,1 @@
+ALTER TABLE rooms ADD CONSTRAINT uq_rooms_architect_user UNIQUE (architect_id, user_id);

@@ -258,11 +258,18 @@ public class ConsultationService {
         Consultation consult = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
 
-        CreateRoomRequest createRoomRequest = new CreateRoomRequest(
-                consult.getArchitectId(), consult.getUserId(), consult.getStartDate(), consult.getEndDate());
-        roomService.createRoom(createRoomRequest);
+        CreateRoomRequest roomRequest = CreateRoomRequest.builder()
+                .architectId(consult.getArchitectId())
+                .userId(consult.getUserId())
+                .startTime(consult.getStartDate())
+                .endTime(consult.getEndDate())
+                .build();
+
+        UUID roomId = roomService.createRoom(roomRequest);
 
         consult.setStatus(ConsultationStatus.SCHEDULED.getStatus());
+        consult.setRoomId(roomId);
+
         consultationRepository.save(consult);
 
         confirmationService.notifyApproved(consultationId.toString());

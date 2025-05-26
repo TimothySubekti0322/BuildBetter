@@ -12,13 +12,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "rooms")
+@Table(name = "rooms", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_rooms_architect_user", columnNames = { "architect_id", "user_id" })
+})
 @Data
 @Builder
 @NoArgsConstructor
