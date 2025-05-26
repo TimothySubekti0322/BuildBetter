@@ -183,14 +183,39 @@ public class SuggestionService {
         // Set the house image based on the type
         String url = request.getUrl();
         if (houseFileType == HouseFileType.HOUSE_IMAGE_FRONT) {
+            if (suggestion.getHouseImageFront() != null) {
+                log.info("Suggestion Service : addSugesstionUrl - Delete old House Image Front file :\""
+                        + suggestion.getHouseImageFront() + "\" from S3");
+                s3Service.deleteFile(suggestion.getHouseImageFront());
+            }
             suggestion.setHouseImageFront(url);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_BACK) {
+            if (suggestion.getHouseImageBack() != null) {
+                log.info("Suggestion Service : addSugesstionUrl - Delete old House Image Back file :\""
+                        + suggestion.getHouseImageBack() + "\" from S3");
+                s3Service.deleteFile(suggestion.getHouseImageBack());
+            }
             suggestion.setHouseImageBack(url);
         } else if (houseFileType == HouseFileType.HOUSE_IMAGE_SIDE) {
+            if (suggestion.getHouseImageSide() != null) {
+                log.info("Suggestion Service : addSugesstionUrl - Delete old House Image Side file :\""
+                        + suggestion.getHouseImageSide() + "\" from S3");
+                s3Service.deleteFile(suggestion.getHouseImageSide());
+            }
             suggestion.setHouseImageSide(url);
         } else if (houseFileType == HouseFileType.HOUSE_OBJECT) {
+            if (suggestion.getObject() != null) {
+                log.info("Suggestion Service : addSugesstionUrl - Delete old House Object file :\""
+                        + suggestion.getObject() + "\" from S3");
+                s3Service.deleteFile(suggestion.getObject());
+            }
             suggestion.setObject(url);
         } else if (houseFileType == HouseFileType.PDF) {
+            if (suggestion.getPdf() != null) {
+                log.info("Suggestion Service : addSugesstionUrl - Delete old PDF file :\""
+                        + suggestion.getPdf() + "\" from S3");
+                s3Service.deleteFile(suggestion.getPdf());
+            }
             suggestion.setPdf(url);
         }
 

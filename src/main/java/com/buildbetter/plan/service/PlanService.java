@@ -64,7 +64,7 @@ public class PlanService {
                 planRepository.save(plan);
         }
 
-        public GetPlansResponse[] getAllPlans(UUID userId) {
+        public GetPlansResponse[] getAllPlans(UUID userId, String role) {
                 log.info("Plan Service : getAllPlans");
 
                 // Check if user exists
@@ -73,9 +73,14 @@ public class PlanService {
                 }
 
                 // Get All Plans
-                List<Plan> plans = planRepository.findByUserIdOrderByCreatedAtDesc(userId);
-                if (plans.isEmpty()) {
-                        return new GetPlansResponse[0];
+                List<Plan> plans;
+                if (role == "admin") {
+                        plans = planRepository.findAllByOrderByCreatedAtDesc();
+                } else {
+                        plans = planRepository.findByUserIdOrderByCreatedAtDesc(userId);
+                        if (plans.isEmpty()) {
+                                return new GetPlansResponse[0];
+                        }
                 }
 
                 log.info("Plan Service : getAllPlans - Iterate through plans and create GetPlansResponse");
@@ -96,7 +101,8 @@ public class PlanService {
                         GenerateSuggestionRequest userInput = SuggestionUtils.planToGenerateSuggestionRequest(plan,
                                         suggestionResponse);
 
-                        plansResponse[i] = new GetPlansResponse(userInput, suggestionResponse);
+                        plansResponse[i] = new GetPlansResponse(plan.getId(), userInput,
+                                        suggestionResponse);
                 }
 
                 return plansResponse;
@@ -126,10 +132,28 @@ public class PlanService {
                                 suggestionResponse);
 
                 GetPlansResponse response = new GetPlansResponse();
+                response.setId(plan.getId());
                 response.setUserInput(userInput);
                 response.setSuggestions(suggestionResponse);
 
                 return response;
+        }
+
+        public void deletePlan(UUID planId, UUID userId) {
+                log.info("Plan Service : deletePlan");
+
+                // Check if Plan exists
+                if (!planRepository.existsById(planId)) {
+                        throw new NotFoundException("Plan not found");
+                }
+
+                // Chekc if Plan is owned by User
+                planRepository.findByIdAndUserId(planId, userId)
+                                .orElseThrow(() -> new NotFoundException("Plan not found or not owned by user"));
+
+                // Delete Plan
+                log.info("Plan Service : deletePlan - Delete Plan");
+                planRepository.deleteById(planId);
         }
 
 }

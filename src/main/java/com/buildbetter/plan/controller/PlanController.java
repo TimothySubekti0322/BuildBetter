@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,8 +59,9 @@ public class PlanController {
         log.info("Plan Controller : getAllPlans - Parse JWT Authentication");
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID userId = UUID.fromString(jwt.claim("id"));
+        String role = jwt.claim("role");
 
-        GetPlansResponse[] plansResponse = planService.getAllPlans(userId);
+        GetPlansResponse[] plansResponse = planService.getAllPlans(userId, role);
 
         ApiResponseMessageAndData<GetPlansResponse[]> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
@@ -86,6 +88,27 @@ public class PlanController {
         response.setMessage("Plan fetched successfully");
         response.setData(planResponse);
 
+        return response;
+    }
+
+    @DeleteMapping("/{id}")
+    @Authenticated
+    public ApiResponseMessageOnly deletePlan(Authentication auth, @PathVariable String id) {
+        log.info("Plan Controller : deletePlan");
+
+        log.info("Plan Controller : deletePlan - Parse UUID from PathVariable");
+        UUID planUuid = UUID.fromString(id);
+
+        log.info("Plan Controller : deletePlan - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
+
+        planService.deletePlan(planUuid, userId);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Plan deleted successfully");
         return response;
     }
 }

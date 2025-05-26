@@ -14,26 +14,30 @@ import com.buildbetter.plan.model.Suggestion;
 @Repository
 public interface PlanRepository extends JpaRepository<Plan, UUID> {
 
-    /** All plans owned by a single user (ordered newest-first). */
-    List<Plan> findByUserIdOrderByCreatedAtDesc(UUID userId);
+        List<Plan> findAllByOrderByCreatedAtDesc();
 
-    /** All plans in a given city / province. */
-    List<Plan> findByProvinceAndCity(String province, String city);
+        /** All plans owned by a single user (ordered newest-first). */
+        List<Plan> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    @Query("""
-            select p.id, p.createdAt
-              from Plan p
-             where p.userId = :userId
-             order by p.createdAt desc
-            """)
-    List<Object[]> findIdsAndDatesByUserId(UUID userId);
+        /** All plans in a given city / province. */
+        List<Plan> findByProvinceAndCity(String province, String city);
 
-    @Query("""
-            select s
-            from Plan p
-            join p.suggestion s
-            where p.id = :planId
-            """)
-    Optional<Suggestion> findSuggestionByPlanId(UUID planId);
+        @Query("""
+                        select p.id, p.createdAt
+                          from Plan p
+                         where p.userId = :userId
+                         order by p.createdAt desc
+                        """)
+        List<Object[]> findIdsAndDatesByUserId(UUID userId);
+
+        @Query("""
+                        select s
+                        from Plan p
+                        join p.suggestion s
+                        where p.id = :planId
+                        """)
+        Optional<Suggestion> findSuggestionByPlanId(UUID planId);
+
+        Optional<Plan> findByIdAndUserId(UUID id, UUID userId);
 
 }

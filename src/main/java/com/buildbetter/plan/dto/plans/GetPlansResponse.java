@@ -1,5 +1,7 @@
 package com.buildbetter.plan.dto.plans;
 
+import java.util.UUID;
+
 import com.buildbetter.plan.dto.suggestions.SuggestionResponse;
 import com.buildbetter.plan.dto.suggestions.generate.GenerateSuggestionRequest;
 
@@ -13,6 +15,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class GetPlansResponse {
+    UUID id;
     GenerateSuggestionRequest userInput;
     SuggestionResponse suggestions;
 }

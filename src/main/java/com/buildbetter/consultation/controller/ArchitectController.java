@@ -24,7 +24,6 @@ import com.buildbetter.consultation.dto.architect.LoginResponse;
 import com.buildbetter.consultation.dto.architect.RegisterArchitectRequest;
 import com.buildbetter.consultation.dto.architect.UpdateArchitectRequest;
 import com.buildbetter.consultation.dto.consultation.Schedule;
-import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.service.ArchitectService;
 import com.buildbetter.consultation.service.ConsultationService;
@@ -138,16 +137,16 @@ public class ArchitectController {
 
     @GetMapping("/me")
     @IsArchitect
-    public ApiResponseWithData<Architect> getCurrentArchitect(Authentication auth) {
+    public ApiResponseWithData<ArchitectResponse> getCurrentArchitect(Authentication auth) {
         log.info("Architect Controller : getCurrentArchitect");
 
         log.info("Architect Controller : getCurrentArchitect - Parse JWT Authentication");
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID architectId = UUID.fromString(jwt.claim("id"));
 
-        Architect architect = architectService.getArchitectById(architectId);
+        ArchitectResponse architect = architectService.getArchitectById(architectId);
 
-        ApiResponseWithData<Architect> response = new ApiResponseWithData<>();
+        ApiResponseWithData<ArchitectResponse> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(architect);
@@ -157,12 +156,12 @@ public class ArchitectController {
 
     @GetMapping("/{id}")
     @IsAdmin
-    public ApiResponseWithData<Architect> getArchitectById(@PathVariable UUID id) {
+    public ApiResponseWithData<ArchitectResponse> getArchitectById(@PathVariable UUID id) {
         log.info("Architect Controller : getArchitectById");
 
-        Architect architect = architectService.getArchitectById(id);
+        ArchitectResponse architect = architectService.getArchitectById(id);
 
-        ApiResponseWithData<Architect> response = new ApiResponseWithData<>();
+        ApiResponseWithData<ArchitectResponse> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(architect);

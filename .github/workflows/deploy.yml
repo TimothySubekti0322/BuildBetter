@@ -160,9 +160,9 @@ jobs:
               -e MAIL_PASSWORD='$MAIL_PASSWORD' \
               -e REDIS_HOST="$REDIS_HOST" \
               -e REDIS_PORT="$REDIS_PORT" \
-              "$IMAGE"
+              "\$IMAGE"
               
             # sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT "\$IMAGE"
 
-            echo ":: Deployed \$ECR_PATH:\$TAG"
+            echo ":: Deployed \$IMAGE"
           EOF

@@ -192,9 +192,12 @@ public class ArchitectService {
                                 .collect(Collectors.toList());
         }
 
-        public Architect getArchitectById(UUID id) {
+        public ArchitectResponse getArchitectById(UUID id) {
                 log.info("Fetching architect with id: {}", id);
-                return architectRepository.findById(id).orElse(null);
+                Architect architect = architectRepository.findById(id).orElseThrow(() -> {
+                        throw new BadRequestException("Architect not found");
+                });
+                return ArchitectUtils.mapToArchitectResponse(architect);
         }
 
         public void deleteArchitect(UUID id) {
