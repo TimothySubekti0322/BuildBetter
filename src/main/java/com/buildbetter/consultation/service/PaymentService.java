@@ -15,6 +15,7 @@ import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.repository.ConsultationRepository;
 import com.buildbetter.consultation.repository.PaymentRepository;
+import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.constant.S3Folder;
 import com.buildbetter.shared.exception.BadRequestException;
 import com.buildbetter.shared.util.S3Service;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentService {
 
         private final ConsultationService consultationService;
+        private final ConfirmationService confirmationService;
         private final ConsultationRepository consultationRepository;
         private final PaymentRepository paymentRepository;
         private final S3Service s3Service;
@@ -47,10 +49,13 @@ public class PaymentService {
                 log.info("ConsultationService : Check Consultation status");
                 Boolean statusIsWaitingForPayment = ConsultationStatus.WAITING_FOR_PAYMENT.getStatus()
                                 .equalsIgnoreCase(consultation.getStatus());
-                Boolean statusIsCancelledDueToInvalidPaymentAndNeverRetried = ConsultationStatus.CANCELLED.getStatus()
+
+                Boolean statusIsCancelledDueToInvalidPayment = ConsultationStatus.CANCELLED.getStatus()
                                 .equals(consultation.getStatus())
                                 && CancellationReason.INVALID_PAYMENT.getReason()
-                                                .equalsIgnoreCase(consultation.getReason())
+                                                .equalsIgnoreCase(consultation.getReason());
+
+                Boolean statusIsCancelledDueToInvalidPaymentAndNeverRetried = statusIsCancelledDueToInvalidPayment
                                 && numberOfUploadProofOfPayment < 2;
 
                 if (!statusIsWaitingForPayment && !statusIsCancelledDueToInvalidPaymentAndNeverRetried) {
@@ -60,7 +65,15 @@ public class PaymentService {
                 Boolean isExpired = LocalDateTime.now().isAfter(consultation.getCreatedAt()
                                 .plusMinutes(10));
 
+                log.info("ConsultationService : Check if consultation payment is expired");
                 if (isExpired) {
+                        consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                        consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
+                        consultationRepository.save(consultation);
+
+                        confirmationService.notifyRejected(consultationId.toString(),
+                                        CancellationReason.INVALID_PAYMENT);
+
                         consultationService.rejectConsultation(consultationId, new RejectConsultationRequest(
                                         CancellationReason.INVALID_PAYMENT.getReason()));
                         throw new BadRequestException("Consultation is expired");
@@ -79,6 +92,10 @@ public class PaymentService {
                                 .consultationId(consultationId)
                                 .uploadProofPayment(0)
                                 .build());
+
+                if (payment.getUploadProofPayment() == 0 && statusIsCancelledDueToInvalidPaymentAndNeverRetried) {
+                        payment.setUploadProofPayment(2);
+                }
 
                 payment.setUploadProofPayment(payment.getUploadProofPayment() + 1);
 

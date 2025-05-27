@@ -111,6 +111,8 @@ jobs:
           REDIS_PORT: ${{ secrets.REDIS_PORT }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_URL: ${{ secrets.AWS_S3_URL }}
 
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
@@ -133,6 +135,8 @@ jobs:
             export MAIL_PASSWORD="${MAIL_PASSWORD}"
             export REDIS_HOST="${REDIS_HOST}"
             export REDIS_PORT="${REDIS_PORT}"
+            export AWS_S3_BUCKET="${AWS_S3_BUCKET}"
+            export AWS_S3_URL="${AWS_S3_URL}"
 
             # ─── 1. Login to ECR ──────────────────────────────────────────────
             echo ":: Logging in to ECR \$ECR_REGISTRY"
@@ -160,6 +164,10 @@ jobs:
               -e MAIL_PASSWORD='$MAIL_PASSWORD' \
               -e REDIS_HOST="$REDIS_HOST" \
               -e REDIS_PORT="$REDIS_PORT" \
+              -e AWS_ACCESS_KEY="$AWS_ACCESS_KEY_ID" \
+              -e AWS_SECRET_KEY="$AWS_SECRET_ACCESS_KEY" \
+              -e AWS_S3_BUCKET="$AWS_S3_BUCKET" \
+              -e AWS_S3_URL="$AWS_S3_URL" \
               "\$IMAGE"
               
             # sudo docker run -p 8080:8080 --network internal-network --name buildbetter-backend -e DB_URL=$DB_URL -e DB_USERNAME=$DB_USERNAME -e DB_PASSWORD=$DB_PASSWORD -e JWT_SECRET=$JWT_SECRET -e MAIL_PASSWORD=$MAIL_PASSWORD -e REDIS_HOST=$REDIS_HOST -e REDIS_PORT=$REDIS_PORT "\$IMAGE"

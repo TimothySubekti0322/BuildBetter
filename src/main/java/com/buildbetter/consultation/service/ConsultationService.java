@@ -253,7 +253,7 @@ public class ConsultationService {
                 .collect(Collectors.toList());
     }
 
-    public void approveConsultation(UUID consultationId) {
+    public UUID approveConsultation(UUID consultationId) {
 
         Consultation consult = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
@@ -273,6 +273,8 @@ public class ConsultationService {
         consultationRepository.save(consult);
 
         confirmationService.notifyApproved(consultationId.toString());
+
+        return roomId;
     }
 
     public void rejectConsultation(UUID consultationId, RejectConsultationRequest reason) {

@@ -151,15 +151,16 @@ public class ConsultationController {
 
     @PostMapping("/consultations/{consultationId}/approve")
     @IsAdmin
-    public ApiResponseMessageOnly approveConsultation(@PathVariable UUID consultationId) {
+    public ApiResponseMessageAndData<UUID> approveConsultation(@PathVariable UUID consultationId) {
         log.info("Consult Controller : approveConsultation");
 
-        consultationService.approveConsultation(consultationId);
+        UUID roomId = consultationService.approveConsultation(consultationId);
 
-        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        ApiResponseMessageAndData<UUID> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Consultation approved successfully");
+        response.setData(roomId);
 
         return response;
     }

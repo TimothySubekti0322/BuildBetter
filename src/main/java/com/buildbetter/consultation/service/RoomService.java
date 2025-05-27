@@ -58,4 +58,18 @@ public class RoomService {
         return roomRepository.findAll();
     }
 
+    public Room getRoomById(UUID roomId, UUID userId) {
+        log.info("Room Service : getRoomById - Room ID: {}", roomId);
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("Room not found with ID: " + roomId));
+
+        if (!room.getUserId().equals(userId) && !room.getArchitectId().equals(userId)) {
+            log.error("Room Service : getRoomById - User ID: {} is not authorized to access this room", userId);
+            throw new IllegalArgumentException("User is not authorized to access this room");
+        }
+
+        return room;
+    }
+
 }
