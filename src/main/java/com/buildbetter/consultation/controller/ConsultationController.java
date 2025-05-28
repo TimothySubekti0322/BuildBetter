@@ -180,4 +180,25 @@ public class ConsultationController {
 
         return response;
     }
+
+    @PostMapping("/consultations/{consultationId}/cancel")
+    @Authenticated
+    public ApiResponseMessageAndData<UUID> userCancelConsultation(Authentication auth,
+            @PathVariable UUID consultationId) {
+        log.info("Consult Controller : userCancelConsultation");
+
+        log.info("Consult Controller : userCancelConsultation - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
+
+        UUID consultId = consultationService.userCancelConsultation(consultationId, userId);
+
+        ApiResponseMessageAndData<UUID> response = new ApiResponseMessageAndData<>();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Consultation cancelled successfully");
+        response.setData(consultId);
+
+        return response;
+    }
 }

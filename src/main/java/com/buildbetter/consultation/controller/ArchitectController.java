@@ -118,14 +118,15 @@ public class ArchitectController {
     @IsAdminOrUser
     public ApiResponseWithData<List<ArchitectResponse>> getAllArchitects(
             Authentication auth,
-            @RequestParam(value = "notContacted", required = false, defaultValue = "false") boolean notContacted) {
+            @RequestParam(value = "notContacted", required = false, defaultValue = "false") boolean notContacted,
+            @RequestParam(value = "city", required = false) String city) {
         log.info("Architect Controller : getAllArchitects");
 
         log.info("Architect Controller : getAllArchitects - Parse JWT Authentication");
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID userId = UUID.fromString(jwt.claim("id"));
 
-        List<ArchitectResponse> architects = architectService.getAllArchitects(userId, notContacted);
+        List<ArchitectResponse> architects = architectService.getAllArchitects(userId, notContacted, city);
 
         ApiResponseWithData<List<ArchitectResponse>> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());

@@ -90,7 +90,18 @@ public class ConsultationService {
             }
         }
 
-        log.info("No overlaps detected. Proceeding to create consult.");
+        log.info("No overlaps detected. Proceeding to create consult");
+
+        String location = "";
+
+        // Check Location for offline consultations
+        if (request.getType().equalsIgnoreCase("offline")) {
+            if (request.getLocation() == null || request.getLocation().isBlank()) {
+
+                throw new BadRequestException("Location is required for offline consultations.");
+            }
+            location = request.getLocation();
+        }
 
         Consultation consult = Consultation.builder()
                 .architectId(request.getArchitectId())
@@ -99,6 +110,7 @@ public class ConsultationService {
                 .endDate(request.getEndDate())
                 .type(request.getType())
                 .total(request.getTotal())
+                .location(location)
                 .status("waiting-for-payment")
                 .build();
 
@@ -297,5 +309,30 @@ public class ConsultationService {
         consultationRepository.save(consultation);
 
         confirmationService.notifyRejected(consultationId.toString(), reasonMessage);
+    }
+
+    public UUID userCancelConsultation(UUID consultationId, UUID userId) {
+
+        Consultation consultation = consultationRepository.findById(consultationId)
+                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        if (!consultation.getUserId().equals(userId)) {
+            throw new BadRequestException("You are not authorized to cancel this consultation");
+        }
+
+        Boolean consultationIsScheduledOrInProgressOrEnded = consultation.getStatus()
+                .equals(ConsultationStatus.SCHEDULED.getStatus()) ||
+                consultation.getStatus().equals(ConsultationStatus.IN_PROGRESS.getStatus()) ||
+                consultation.getStatus().equals(ConsultationStatus.ENDED.getStatus());
+
+        if (consultationIsScheduledOrInProgressOrEnded) {
+            throw new BadRequestException("Consultation is not in a state that can be cancelled");
+        }
+
+        consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
+        consultation.setReason(CancellationReason.USER_CANCELLED.getReason());
+        consultationRepository.save(consultation);
+
+        return consultation.getId();
     }
 }

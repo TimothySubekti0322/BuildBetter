@@ -23,4 +23,6 @@ public class CreateConsultationRequest {
 
     @Min(value = 1, message = "Field 'total' must be greater than 0")
     private Integer total;
+
+    private String location;
 }

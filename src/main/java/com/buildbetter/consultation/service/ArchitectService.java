@@ -176,7 +176,7 @@ public class ArchitectService {
                 architectRepository.save(existingArchitect);
         }
 
-        public List<ArchitectResponse> getAllArchitects(UUID userId, Boolean notContacted) {
+        public List<ArchitectResponse> getAllArchitects(UUID userId, Boolean notContacted, String city) {
                 log.info("Fetching all architects");
 
                 List<Architect> architects;
@@ -185,6 +185,13 @@ public class ArchitectService {
                         architects = architectRepository.findAllByIdNotIn(contacted);
                 } else {
                         architects = architectRepository.findAll();
+                }
+
+                if (city != null && !city.isBlank()) {
+                        log.info("Filtering architects by city: {}", city);
+                        architects = architects.stream()
+                                        .filter(architect -> architect.getCity().equalsIgnoreCase(city))
+                                        .collect(Collectors.toList());
                 }
 
                 return architects.stream()

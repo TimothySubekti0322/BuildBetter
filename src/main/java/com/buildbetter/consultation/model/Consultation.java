@@ -50,6 +50,9 @@ public class Consultation {
     @Column(name = "reason")
     private String reason;
 
+    @Column(name = "location", columnDefinition = "TEXT")
+    private String location;
+
     @Column(name = "start_date")
     private LocalDateTime startDate;
 

@@ -7,7 +7,8 @@ import lombok.Getter;
 @Getter
 public enum CancellationReason {
     ARCHITECT_UNAVAILABLE("architect is unavailable"),
-    INVALID_PAYMENT("proof of payment is invalid");
+    INVALID_PAYMENT("proof of payment is invalid"),
+    USER_CANCELLED("user cancelled the consultation");
 
     private final String reason;
 
