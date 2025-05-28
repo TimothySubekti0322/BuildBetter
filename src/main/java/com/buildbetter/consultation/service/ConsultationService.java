@@ -13,6 +13,7 @@ import com.buildbetter.consultation.constant.ConsultationStatus;
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.Schedule;
+import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
 import com.buildbetter.consultation.dto.room.CreateRoomRequest;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.repository.ConsultationRepository;
@@ -334,5 +335,54 @@ public class ConsultationService {
         consultationRepository.save(consultation);
 
         return consultation.getId();
+    }
+
+    public void updateConsultation(UUID consultationId, UUID userId, UpdateConsultationRequest request) {
+        Consultation consultation = consultationRepository.findById(consultationId)
+                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        if (!consultation.getUserId().equals(userId)) {
+            throw new BadRequestException("You are not authorized to update this consultation");
+        }
+
+        Boolean consultationIsCancelledDueToArchitectUnavailable = consultation.getStatus()
+                .equals(ConsultationStatus.CANCELLED.getStatus()) &&
+                consultation.getReason().equals(CancellationReason.ARCHITECT_UNAVAILABLE.getReason());
+
+        if (!consultationIsCancelledDueToArchitectUnavailable) {
+            throw new BadRequestException("Consultation is not in a state that can be updated");
+        }
+
+        // Update fields based on the request
+        if (request.getStartDate() != null) {
+            if (request.getStartDate().isBefore(LocalDateTime.now())) {
+                throw new BadRequestException("Start date cannot be in the past");
+            }
+            consultation.setStartDate(request.getStartDate());
+        }
+        if (request.getEndDate() != null) {
+            if (request.getEndDate().isBefore(LocalDateTime.now())) {
+                throw new BadRequestException("End date cannot be in the past");
+            }
+            consultation.setEndDate(request.getEndDate());
+        }
+
+        // Validate date range
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getStartDate().isAfter(request.getEndDate())) {
+            throw new BadRequestException("Start date cannot be after end date");
+        }
+
+        if (request.getType() != null) {
+            consultation.setType(request.getType());
+        }
+        if (request.getLocation() != null) {
+            consultation.setLocation(request.getLocation());
+        }
+        if (request.getTotal() != null) {
+            consultation.setTotal(request.getTotal());
+        }
+
+        consultationRepository.save(consultation);
     }
 }

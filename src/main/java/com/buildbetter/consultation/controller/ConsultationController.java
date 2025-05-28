@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
+import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.service.ConsultationService;
@@ -201,4 +203,24 @@ public class ConsultationController {
 
         return response;
     }
+
+    @PatchMapping("/consultations/{consultationId}")
+    @Authenticated
+    public ApiResponseMessageOnly updateConsultation(Authentication auth, @PathVariable UUID consultationId,
+            @Valid @RequestBody UpdateConsultationRequest request) {
+        log.info("Consult Controller : updateConsultation");
+
+        log.info("Consult Controller : updateConsultation - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
+
+        consultationService.updateConsultation(consultationId, userId, request);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Consultation updated successfully");
+        return response;
+    }
+
 }
