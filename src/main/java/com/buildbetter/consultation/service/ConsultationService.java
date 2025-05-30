@@ -1,7 +1,10 @@
 package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -11,15 +14,20 @@ import org.springframework.stereotype.Service;
 import com.buildbetter.consultation.constant.CancellationReason;
 import com.buildbetter.consultation.constant.ConsultationStatus;
 import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
+import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.Schedule;
 import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
 import com.buildbetter.consultation.dto.room.CreateRoomRequest;
+import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
+import com.buildbetter.consultation.repository.ArchitectRepository;
 import com.buildbetter.consultation.repository.ConsultationRepository;
 import com.buildbetter.consultation.util.ConsultationUtils;
 import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.exception.BadRequestException;
+import com.buildbetter.user.UserAPI;
+import com.buildbetter.user.model.User;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +38,10 @@ import lombok.extern.slf4j.Slf4j;
 public class ConsultationService {
 
     private final ConsultationRepository consultationRepository;
+    private final ArchitectRepository architectRepository;
     private final ConfirmationService confirmationService;
     private final RoomService roomService;
+    private final UserAPI userApi;
 
     public UUID createConsult(CreateConsultationRequest request, UUID userId) {
         LocalDateTime now = LocalDateTime.now();
@@ -168,13 +178,14 @@ public class ConsultationService {
                 .collect(Collectors.toList());
     }
 
-    public List<Consultation> getAllConsults(String type, String status, Boolean includeCancelled, Boolean upcoming) {
+    public List<GetConsultationResponse> getAllConsults(String type, String status, Boolean includeCancelled,
+            Boolean upcoming, UUID requestingUserId) {
         // Get base dataset
         List<Consultation> consults;
 
         // Handle includeCancelled filter at repository level for efficiency
-        if (includeCancelled != null && includeCancelled) {
-            if (upcoming != null && upcoming) {
+        if (Boolean.TRUE.equals(includeCancelled)) {
+            if (Boolean.TRUE.equals(upcoming)) {
                 consults = consultationRepository
                         .findByStartDateGreaterThanEqualOrderByStartDate(LocalDateTime.now());
             } else {
@@ -182,29 +193,42 @@ public class ConsultationService {
                         Sort.by(Sort.Direction.ASC, "startDate"));
             }
         } else {
-            if (upcoming != null && upcoming) {
+            if (Boolean.TRUE.equals(upcoming)) {
                 consults = consultationRepository
-                        .findByStatusNotAndStartDateGreaterThanEqualOrderByStartDate("cancelled", LocalDateTime.now());
+                        .findByStatusNotAndStartDateGreaterThanEqualOrderByStartDate(
+                                "cancelled", LocalDateTime.now());
             } else {
-                consults = consultationRepository.findByStatusNotOrderByStartDate("cancelled");
+                consults = consultationRepository
+                        .findByStatusNotOrderByStartDate("cancelled");
             }
         }
 
+        List<Consultation> filtered = consults.stream()
+                .filter(c -> type == null || type.isBlank() || type.equalsIgnoreCase(c.getType()))
+                .filter(c -> status == null || status.isBlank() || status.equalsIgnoreCase(c.getStatus()))
+                .collect(Collectors.toList());
+
+        if (filtered.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<UUID> architectIds = filtered.stream().map(Consultation::getArchitectId).collect(Collectors.toSet());
+        List<Architect> architects = architectRepository.findAllByIdIn(architectIds);
+        Map<UUID, Architect> architectMap = architects.stream().collect(Collectors.toMap(Architect::getId, a -> a));
+        Map<UUID, User> userMap = userApi.getAllUsers(requestingUserId);
+
         // Apply additional filters using streams
-        return consults.stream()
-                .filter(consult -> {
-                    // Filter by type if specified
-                    if (type != null && !type.trim().isEmpty()) {
-                        return type.equalsIgnoreCase(consult.getType());
-                    }
-                    return true;
-                })
-                .filter(consult -> {
-                    // Filter by status if specified
-                    if (status != null && !status.trim().isEmpty()) {
-                        return status.equalsIgnoreCase(consult.getStatus());
-                    }
-                    return true;
+        return filtered.stream()
+                .map(c -> {
+                    User u = userMap.get(c.getUserId());
+                    Architect a = architectMap.get(c.getArchitectId());
+                    return GetConsultationResponse.builder()
+                            .consultation(c)
+                            .userName(u != null ? u.getUsername() : null)
+                            .userCity(u != null ? u.getCity() : null)
+                            .architectName(a != null ? a.getUsername() : null)
+                            .architectCity(a != null ? a.getCity() : null)
+                            .build();
                 })
                 .collect(Collectors.toList());
     }
@@ -222,9 +246,21 @@ public class ConsultationService {
         return consultations;
     }
 
-    public Consultation getConsultById(UUID consultId) {
-        return consultationRepository.findById(consultId)
+    public GetConsultationResponse getConsultById(UUID consultId) {
+        Consultation consultation = consultationRepository.findById(consultId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        User user = userApi.getUserById(consultation.getUserId());
+
+        Architect architect = architectRepository.findById(consultation.getArchitectId())
+                .orElseThrow(() -> new BadRequestException("Architect not found"));
+
+        return GetConsultationResponse.builder().architectCity(architect.getCity())
+                .architectName(architect.getUsername())
+                .consultation(consultation)
+                .userCity(user.getCity())
+                .userName(user.getUsername())
+                .build();
     }
 
     public List<Consultation> getUserConsultations(UUID userId, String type, String status,

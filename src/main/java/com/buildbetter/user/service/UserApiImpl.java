@@ -1,6 +1,9 @@
 package com.buildbetter.user.service;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -32,5 +35,36 @@ public class UserApiImpl implements UserAPI {
         }
 
         return user.getId();
+    }
+
+    @Override
+    public Map<UUID, User> getAllUsers(UUID requestingUserId) {
+        log.info("UserApiImpl : getAllUsers - Requesting User ID: {}", requestingUserId);
+        if (requestingUserId == null) {
+            throw new IllegalArgumentException("Requesting user ID cannot be null");
+        }
+
+        User requestingUser = userRepository.findById(requestingUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + requestingUserId));
+
+        if (!requestingUser.getRole().equals("admin")) {
+            throw new IllegalArgumentException(
+                    "User with ID " + requestingUserId + " is not authorized to view all users");
+        }
+
+        List<User> users = userRepository.findAll();
+
+        return users.stream().collect(Collectors.toMap(User::getId, u -> u));
+    }
+
+    @Override
+    public User getUserById(UUID userId) {
+        log.info("UserApiImpl : getUserById - User ID: {}", userId);
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
     }
 }
