@@ -131,6 +131,7 @@ public class AuthService {
         loginResponse.setToken(token);
         loginResponse.setRole(user.getRole());
         loginResponse.setUsername(user.getUsername());
+        loginResponse.setCity(user.getCity());
 
         return loginResponse;
     }

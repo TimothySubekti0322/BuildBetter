@@ -12,6 +12,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.buildbetter.consultation.websocket.chat.dto.ChatMessage;
 import com.buildbetter.consultation.websocket.chat.service.ChatSessionManager;
 import com.buildbetter.consultation.websocket.chat.service.ChatWebSocketService;
+import com.buildbetter.consultation.websocket.chat.service.RoomTimeoutService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper mapper;
     private final ChatWebSocketService chatWebSocketService;
     private final ChatSessionManager sessionManager;
+    private final RoomTimeoutService roomTimeoutService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -36,8 +38,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         UUID roomId = (UUID) session.getAttributes().get("roomId");
         UUID userId = (UUID) session.getAttributes().get("userId");
+        
+        // Check if this is the first participant in the room
+        boolean isFirstParticipant = !sessionManager.hasActiveSessions(roomId);
+        
+        // Register the session
         sessionManager.register(roomId, session);
-        log.info("WS connected: room={}, user={}, session={}", roomId, userId, session.getId());
+        
+        // If this is the first participant, schedule the room timeout
+        if (isFirstParticipant) {
+            log.info("First participant connected to room {}, scheduling timeout", roomId);
+            roomTimeoutService.scheduleRoomTimeout(roomId);
+        }
+        
+        log.info("WS connected: room={}, user={}, session={}, totalInRoom={}", 
+                roomId, userId, session.getId(), sessionManager.getSessionCount(roomId));
     }
 
     @Override
@@ -61,7 +76,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         UUID roomId = extractRoomId(session);
         sessionManager.remove(roomId, session);
-        log.info("WS closed: room={}, session={}, status={}", roomId, session.getId(), status);
+        
+        // Check if this was the last participant
+        boolean hasRemainingParticipants = sessionManager.hasActiveSessions(roomId);
+        
+        log.info("WS closed: room={}, session={}, status={}, remainingInRoom={}", 
+                roomId, session.getId(), status, 
+                hasRemainingParticipants ? sessionManager.getSessionCount(roomId) : 0);
+        
+        // Optional: Cancel timeout if no participants remain (saves resources)
+        // Comment this out if you want the room to timeout even with no participants
+        if (!hasRemainingParticipants) {
+            boolean cancelled = roomTimeoutService.cancelRoomTimeout(roomId);
+            if (cancelled) {
+                log.info("Cancelled timeout for empty room {}", roomId);
+            }
+        }
     }
 
     /* ------------------------------------------------ */

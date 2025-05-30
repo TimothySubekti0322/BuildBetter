@@ -31,4 +31,45 @@ public class ChatSessionManager {
     public Set<WebSocketSession> getSessions(UUID roomId) {
         return sessions.getOrDefault(roomId, Set.of());
     }
+
+    /**
+     * Get all room IDs that currently have active sessions
+     * Used by the timeout service to check for expired rooms
+     */
+    public Set<UUID> getActiveRoomIds() {
+        return sessions.keySet();
+    }
+
+    /**
+     * Get total number of active sessions across all rooms
+     * Useful for monitoring
+     */
+    public int getTotalActiveSessions() {
+        return sessions.values().stream()
+                .mapToInt(Set::size)
+                .sum();
+    }
+
+    /**
+     * Get number of active sessions for a specific room
+     */
+    public int getSessionCount(UUID roomId) {
+        return sessions.getOrDefault(roomId, Set.of()).size();
+    }
+
+    /**
+     * Check if a room has any active sessions
+     */
+    public boolean hasActiveSessions(UUID roomId) {
+        Set<WebSocketSession> roomSessions = sessions.get(roomId);
+        return roomSessions != null && !roomSessions.isEmpty();
+    }
+
+    /**
+     * Check if adding this session would make it the first participant
+     * This method should be called BEFORE registering the session
+     */
+    public boolean wouldBeFirstParticipant(UUID roomId) {
+        return !hasActiveSessions(roomId);
+    }
 }
