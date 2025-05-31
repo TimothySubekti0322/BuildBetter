@@ -3,14 +3,14 @@ package com.buildbetter.user;
 import java.util.Map;
 import java.util.UUID;
 
-import com.buildbetter.user.model.User;
+import com.buildbetter.user.dto.user.GetUserNameAndCity;
 
 public interface UserAPI {
     boolean existsById(UUID userId);
 
     UUID getUserIdByEmail(String email);
 
-    Map<UUID, User> getAllUsers(UUID requestingUserId);
+    Map<UUID, GetUserNameAndCity> getAllUsersNameAndCity(UUID requestingUserId);
 
-    User getUserById(UUID userId);
+    GetUserNameAndCity getUserNameAndCityById(UUID userId);
 }

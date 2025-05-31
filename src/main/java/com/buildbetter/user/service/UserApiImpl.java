@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.buildbetter.user.UserAPI;
+import com.buildbetter.user.dto.user.GetUserNameAndCity;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.UserRepository;
 
@@ -38,7 +39,7 @@ public class UserApiImpl implements UserAPI {
     }
 
     @Override
-    public Map<UUID, User> getAllUsers(UUID requestingUserId) {
+    public Map<UUID, GetUserNameAndCity> getAllUsersNameAndCity(UUID requestingUserId) {
         log.info("UserApiImpl : getAllUsers - Requesting User ID: {}", requestingUserId);
         if (requestingUserId == null) {
             throw new IllegalArgumentException("Requesting user ID cannot be null");
@@ -54,17 +55,26 @@ public class UserApiImpl implements UserAPI {
 
         List<User> users = userRepository.findAll();
 
-        return users.stream().collect(Collectors.toMap(User::getId, u -> u));
+        return users.stream().collect(
+                Collectors.toMap(User::getId, u -> new GetUserNameAndCity(u.getId(), u.getUsername(), u.getCity())));
     }
 
     @Override
-    public User getUserById(UUID userId) {
+    public GetUserNameAndCity getUserNameAndCityById(UUID userId) {
         log.info("UserApiImpl : getUserById - User ID: {}", userId);
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");
         }
 
-        return userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        GetUserNameAndCity userNameAndCity = GetUserNameAndCity.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .city(user.getCity())
+                .build();
+
+        return userNameAndCity;
     }
 }

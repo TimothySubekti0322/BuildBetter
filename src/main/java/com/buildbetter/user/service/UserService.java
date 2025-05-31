@@ -66,8 +66,4 @@ public class UserService {
         log.info("User Service : updateUser - User updated successfully");
         userRepository.save(existingUser);
     }
-
-    {
-
-    }
 }

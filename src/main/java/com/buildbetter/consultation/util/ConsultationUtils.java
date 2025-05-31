@@ -10,8 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.Schedule;
+import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
+import com.buildbetter.user.dto.user.GetUserNameAndCity;
 
 import lombok.NoArgsConstructor;
 
@@ -72,5 +75,27 @@ public class ConsultationUtils {
             current = current.plusMinutes(30);
         }
         return slots;
+    }
+
+    public static GetConsultationResponse toGetConsultationResponse(Consultation consultation, GetUserNameAndCity user,
+            Architect architect) {
+        return GetConsultationResponse.builder()
+                .id(consultation.getId())
+                .userId(user.getId())
+                .userName(user.getUsername())
+                .userCity(user.getCity())
+                .architectId(architect.getId())
+                .architectName(architect.getUsername())
+                .architectCity(architect.getCity())
+                .roomId(consultation.getRoomId())
+                .type(consultation.getType())
+                .total(consultation.getTotal())
+                .status(consultation.getStatus())
+                .reason(consultation.getReason())
+                .location(consultation.getLocation())
+                .startDate(consultation.getStartDate())
+                .endDate(consultation.getEndDate())
+                .startTime(consultation.getStartDate())
+                .build();
     }
 }

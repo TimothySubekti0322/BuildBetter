@@ -27,7 +27,7 @@ import com.buildbetter.consultation.util.ConsultationUtils;
 import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.exception.BadRequestException;
 import com.buildbetter.user.UserAPI;
-import com.buildbetter.user.model.User;
+import com.buildbetter.user.dto.user.GetUserNameAndCity;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -215,20 +215,21 @@ public class ConsultationService {
         Set<UUID> architectIds = filtered.stream().map(Consultation::getArchitectId).collect(Collectors.toSet());
         List<Architect> architects = architectRepository.findAllByIdIn(architectIds);
         Map<UUID, Architect> architectMap = architects.stream().collect(Collectors.toMap(Architect::getId, a -> a));
-        Map<UUID, User> userMap = userApi.getAllUsers(requestingUserId);
+        Map<UUID, GetUserNameAndCity> userMap = userApi.getAllUsersNameAndCity(requestingUserId);
 
         // Apply additional filters using streams
         return filtered.stream()
                 .map(c -> {
-                    User u = userMap.get(c.getUserId());
+                    GetUserNameAndCity u = userMap.get(c.getUserId());
                     Architect a = architectMap.get(c.getArchitectId());
-                    return GetConsultationResponse.builder()
-                            .consultation(c)
-                            .userName(u != null ? u.getUsername() : null)
-                            .userCity(u != null ? u.getCity() : null)
-                            .architectName(a != null ? a.getUsername() : null)
-                            .architectCity(a != null ? a.getCity() : null)
-                            .build();
+                    return ConsultationUtils.toGetConsultationResponse(c, u, a);
+                    // return GetConsultationResponse.builder()
+                    // .consultation(c)
+                    // .userName(u != null ? u.getUsername() : null)
+                    // .userCity(u != null ? u.getCity() : null)
+                    // .architectName(a != null ? a.getUsername() : null)
+                    // .architectCity(a != null ? a.getCity() : null)
+                    // .build();
                 })
                 .collect(Collectors.toList());
     }
@@ -250,17 +251,19 @@ public class ConsultationService {
         Consultation consultation = consultationRepository.findById(consultId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
 
-        User user = userApi.getUserById(consultation.getUserId());
+        GetUserNameAndCity user = userApi.getUserNameAndCityById(consultation.getUserId());
 
         Architect architect = architectRepository.findById(consultation.getArchitectId())
                 .orElseThrow(() -> new BadRequestException("Architect not found"));
 
-        return GetConsultationResponse.builder().architectCity(architect.getCity())
-                .architectName(architect.getUsername())
-                .consultation(consultation)
-                .userCity(user.getCity())
-                .userName(user.getUsername())
-                .build();
+        // return GetConsultationResponse.builder().architectCity(architect.getCity())
+        // .architectName(architect.getUsername())
+        // .consultation(consultation)
+        // .userCity(user.getCity())
+        // .userName(user.getUsername())
+        // .build();
+
+        return ConsultationUtils.toGetConsultationResponse(consultation, user, architect);
     }
 
     public List<Consultation> getUserConsultations(UUID userId, String type, String status,
