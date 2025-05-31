@@ -18,7 +18,6 @@ import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
-import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.service.ConsultationService;
 import com.buildbetter.consultation.service.PaymentService;
@@ -135,7 +134,7 @@ public class ConsultationController {
 
     @GetMapping("/users/consultations")
     @IsAdminOrUser
-    public ApiResponseWithData<List<Consultation>> getUserConsults(
+    public ApiResponseWithData<List<GetConsultationResponse>> getUserConsults(
             Authentication auth,
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "status", required = false) String status,
@@ -147,10 +146,11 @@ public class ConsultationController {
         JwtAuthentication jwt = (JwtAuthentication) auth;
         UUID userId = UUID.fromString(jwt.claim("id"));
 
-        List<Consultation> consults = consultationService.getUserConsultations(userId, type, status, includeCancelled,
+        List<GetConsultationResponse> consults = consultationService.getUserConsultations(userId, type, status,
+                includeCancelled,
                 upcoming);
 
-        ApiResponseWithData<List<Consultation>> response = new ApiResponseWithData<>();
+        ApiResponseWithData<List<GetConsultationResponse>> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(consults);

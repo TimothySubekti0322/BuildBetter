@@ -53,6 +53,9 @@ public class Consultation {
     @Column(name = "location", columnDefinition = "TEXT")
     private String location;
 
+    @Column(name = "location_description", columnDefinition = "TEXT")
+    private String locationDescription;
+
     @Column(name = "start_date")
     private LocalDateTime startDate;
 

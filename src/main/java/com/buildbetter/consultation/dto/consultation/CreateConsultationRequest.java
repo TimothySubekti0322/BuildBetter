@@ -32,4 +32,6 @@ public class CreateConsultationRequest {
     private Integer total;
 
     private String location;
+
+    private String locationDescription;
 }

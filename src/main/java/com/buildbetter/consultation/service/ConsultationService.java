@@ -70,13 +70,18 @@ public class ConsultationService {
         log.info(
                 "Consultation Service : createConsult - Checking for active consultations with architect: {}, user: {}, active statuses: {}, current time: {}",
                 request.getArchitectId(), userId, active, now);
-        if (consultationRepository.existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
-                request.getArchitectId(),
-                userId,
-                active,
-                now)) {
+        Consultation hasActiveConsultation = consultationRepository
+                .findByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
+                        request.getArchitectId(),
+                        userId,
+                        active,
+                        now);
+        if (hasActiveConsultation != null) {
+            log.warn(
+                    "Consultation Service : createConsult - User {} already has an active booking with architect {}, with Consultation ID: {}",
+                    userId, request.getArchitectId(), hasActiveConsultation.getId());
             throw new BadRequestException(
-                    "You already have an active (scheduled or in-progress) booking with this architect.");
+                    "You already have an active (scheduled or in-progress) booking with this architect");
         }
 
         List<Consultation> upcoming = consultationRepository
@@ -128,11 +133,10 @@ public class ConsultationService {
 
         String location = "";
 
-        // Check Location for offline consultations
+        // Check Location and Location Description for offline consultations
         log.info("Consultation Service : createConsult - Checking consultation type: {}", request.getType());
         if (request.getType().equalsIgnoreCase("offline")) {
             if (request.getLocation() == null || request.getLocation().isBlank()) {
-
                 throw new BadRequestException("Location is required for offline consultations.");
             }
             location = request.getLocation();
@@ -146,6 +150,7 @@ public class ConsultationService {
                 .type(request.getType())
                 .total(request.getTotal())
                 .location(location)
+                .locationDescription(request.getLocationDescription())
                 .status("waiting-for-payment")
                 .build();
 
@@ -260,13 +265,6 @@ public class ConsultationService {
                     GetUserNameAndCity u = userMap.get(c.getUserId());
                     Architect a = architectMap.get(c.getArchitectId());
                     return ConsultationUtils.toGetConsultationResponse(c, u, a);
-                    // return GetConsultationResponse.builder()
-                    // .consultation(c)
-                    // .userName(u != null ? u.getUsername() : null)
-                    // .userCity(u != null ? u.getCity() : null)
-                    // .architectName(a != null ? a.getUsername() : null)
-                    // .architectCity(a != null ? a.getCity() : null)
-                    // .build();
                 })
                 .collect(Collectors.toList());
     }
@@ -302,7 +300,7 @@ public class ConsultationService {
         return ConsultationUtils.toGetConsultationResponse(consultation, user, architect);
     }
 
-    public List<Consultation> getUserConsultations(UUID userId, String type, String status,
+    public List<GetConsultationResponse> getUserConsultations(UUID userId, String type, String status,
             Boolean includeCancelled, Boolean upcoming) {
 
         log.info(
@@ -321,27 +319,38 @@ public class ConsultationService {
 
         // Apply filters using streams
         return consults.stream()
+                // filter by type if provided
                 .filter(consult -> {
-                    // Filter by type if specified
                     if (type != null && !type.trim().isEmpty()) {
                         return type.equalsIgnoreCase(consult.getType());
                     }
                     return true;
                 })
+                // filter by status if provided
                 .filter(consult -> {
-                    // Filter by status if specified
                     if (status != null && !status.trim().isEmpty()) {
                         return status.equalsIgnoreCase(consult.getStatus());
                     }
                     return true;
                 })
+                // exclude “CANCELLED” unless includeCancelled is true or null
                 .filter(consult -> {
-                    // Filter out cancelled consults unless explicitly included
-                    if (includeCancelled != null && !includeCancelled) {
+                    if (Boolean.FALSE.equals(includeCancelled)) {
                         return !"CANCELLED".equalsIgnoreCase(consult.getStatus());
                     }
-                    // If includeCancelled is null or true, include all statuses
                     return true;
+                })
+                // Map each filtered Consultation → GetConsultationResponse
+                .map(consult -> {
+                    // a) load the user‐projection (just id, username, city)
+                    GetUserNameAndCity userProjection = userApi.getUserNameAndCityById(consult.getUserId());
+
+                    // b) load the architect entity (so you can extract name & city)
+                    Architect architect = architectRepository.findById(consult.getArchitectId())
+                            .orElseThrow(() -> new BadRequestException("Architect not found"));
+
+                    // c) build the DTO using your utility
+                    return ConsultationUtils.toGetConsultationResponse(consult, userProjection, architect);
                 })
                 .collect(Collectors.toList());
     }

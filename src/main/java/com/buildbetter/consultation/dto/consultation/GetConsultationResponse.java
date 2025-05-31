@@ -26,6 +26,7 @@ public class GetConsultationResponse {
     private String status;
     private String reason;
     private String location;
+    private String locationDescription;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private LocalDateTime createdAt;

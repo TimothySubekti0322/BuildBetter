@@ -93,6 +93,7 @@ public class ConsultationUtils {
                 .status(consultation.getStatus())
                 .reason(consultation.getReason())
                 .location(consultation.getLocation())
+                .locationDescription(consultation.getLocationDescription())
                 .startDate(consultation.getStartDate())
                 .endDate(consultation.getEndDate())
                 .createdAt(consultation.getCreatedAt())
