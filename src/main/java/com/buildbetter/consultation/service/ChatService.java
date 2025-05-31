@@ -28,6 +28,7 @@ public class ChatService {
         log.info("Fetching chat history for room: {}", roomId);
 
         // Check Access
+        log.info("Checking access for user: {} to room: {}", userId, roomId);
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Room not found"));
 
@@ -35,6 +36,8 @@ public class ChatService {
             log.error("User {} does not have access to room {}", userId, roomId);
             throw new IllegalArgumentException("User does not have access to read chat history of this room");
         }
+
+        log.info("Authorized access for user: {} to room: {}", userId, roomId);
 
         List<Chat> history = chatRepository.findByRoomIdOrderByCreatedAtAsc(roomId);
         return history;

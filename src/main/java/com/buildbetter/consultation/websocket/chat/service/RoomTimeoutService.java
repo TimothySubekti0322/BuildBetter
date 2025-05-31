@@ -3,7 +3,7 @@ package com.buildbetter.consultation.websocket.chat.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.List; // Added
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -136,26 +136,22 @@ public class RoomTimeoutService {
 
         // Find consultations that were using this room and scheduled to end at this
         // time
-        List<Consultation> consultationsToEnd = consultationRepository.findByRoomIdAndEndDate(roomId, roomEndTime);
+        Optional<Consultation> consultationsToEnd = consultationRepository.findByRoomIdAndEndDate(roomId, roomEndTime);
 
         if (consultationsToEnd.isEmpty()) {
             log.warn("No consultation found for room {} with end date {} to mark as {}.",
                     roomId, roomEndTime, ConsultationStatus.ENDED.getStatus());
             return;
-        }
-
-        for (Consultation consultation : consultationsToEnd) {
-            if (!ConsultationStatus.ENDED.getStatus().equalsIgnoreCase(consultation.getStatus())) {
-                consultation.setStatus(ConsultationStatus.ENDED.getStatus());
-                // You could also set an actual end time if needed, e.g.,
-                // consultation.setActualEndTime(LocalDateTime.now());
-                consultationRepository.save(consultation);
-                log.info("Consultation {} (scheduled end: {}) for room {} has been marked as {}.",
-                        consultation.getId(), roomEndTime, roomId, ConsultationStatus.ENDED.getStatus());
-            } else {
-                log.info("Consultation {} (scheduled end: {}) for room {} was already {}.",
-                        consultation.getId(), roomEndTime, roomId, ConsultationStatus.ENDED.getStatus());
-            }
+        } else if (!ConsultationStatus.ENDED.getStatus().equalsIgnoreCase(consultationsToEnd.get().getStatus())) {
+            consultationsToEnd.get().setStatus(ConsultationStatus.ENDED.getStatus());
+            // You could also set an actual end time if needed, e.g.,
+            // consultation.setActualEndTime(LocalDateTime.now());
+            consultationRepository.save(consultationsToEnd.get());
+            log.info("Consultation {} (scheduled end: {}) for room {} has been marked as {}.",
+                    consultationsToEnd.get().getId(), roomEndTime, roomId, ConsultationStatus.ENDED.getStatus());
+        } else {
+            log.info("Consultation {} (scheduled end: {}) for room {} was already {}.",
+                    consultationsToEnd.get().getId(), roomEndTime, roomId, ConsultationStatus.ENDED.getStatus());
         }
     }
 

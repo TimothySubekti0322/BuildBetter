@@ -44,13 +44,32 @@ public class ConsultationService {
     private final UserAPI userApi;
 
     public UUID createConsult(CreateConsultationRequest request, UUID userId) {
+        log.info(
+                "Consultation Service : createConsult - Creating consultation for user: {}, architect: {}, type: {}, start: {}, end: {}",
+                userId, request.getArchitectId(), request.getType(), request.getStartDate(), request.getEndDate());
+
         LocalDateTime now = LocalDateTime.now();
+
+        log.info(
+                "Consultation Service : Checking if request dates are in the future and start date is before end date: {}, {}",
+                request.getStartDate(), request.getEndDate());
+        // Validate that start and end dates are in the future
+        if (request.getStartDate().isBefore(now) || request.getEndDate().isBefore(now)) {
+            throw new BadRequestException("Start and end dates must be in the future.");
+        }
+
+        if (request.getStartDate().isAfter(request.getEndDate())) {
+            throw new BadRequestException("Start date cannot be after end date.");
+        }
 
         List<String> active = List.of(
                 ConsultationStatus.SCHEDULED.getStatus(),
                 ConsultationStatus.IN_PROGRESS.getStatus());
 
-        // 1) Fast-fail if *this* user already has one
+        // 1) Fast-fail if *this* user already has one consultation with this architect
+        log.info(
+                "Consultation Service : createConsult - Checking for active consultations with architect: {}, user: {}, active statuses: {}, current time: {}",
+                request.getArchitectId(), userId, active, now);
         if (consultationRepository.existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
                 request.getArchitectId(),
                 userId,
@@ -64,9 +83,12 @@ public class ConsultationService {
                 .findByArchitectIdAndStartDateGreaterThanEqualAndStatusNotOrderByStartDate(request.getArchitectId(),
                         now, "cancelled");
 
-        log.info("Upcoming Consults: {}", upcoming);
+        log.info("Consultation Service : createConsult - Upcoming Consults: {}", upcoming);
 
         // Check wheter there is upcoming booking between user and architect
+        log.info(
+                "Consultation Service : createConsult - Checking for overlaps with upcoming consultations for architect: {}, user: {}",
+                request.getArchitectId(), userId);
         if (upcoming.stream().anyMatch(consult -> consult.getUserId().equals(userId))) {
             throw new BadRequestException("You already have an active booking with this architect.");
         }
@@ -74,6 +96,7 @@ public class ConsultationService {
         LocalDateTime newStart = request.getStartDate();
         LocalDateTime newEnd = request.getEndDate();
 
+        log.info("Consultation Service : createConsult - Checking for overlaps wiht existing bookings");
         for (Consultation booked : upcoming) {
             if ("offline".equalsIgnoreCase(booked.getType())) {
                 // build a 1-hour buffer around the offline slot
@@ -101,11 +124,12 @@ public class ConsultationService {
             }
         }
 
-        log.info("No overlaps detected. Proceeding to create consult");
+        log.info("Consultation Service : createConsult - No overlaps detected. Proceeding to create consult");
 
         String location = "";
 
         // Check Location for offline consultations
+        log.info("Consultation Service : createConsult - Checking consultation type: {}", request.getType());
         if (request.getType().equalsIgnoreCase("offline")) {
             if (request.getLocation() == null || request.getLocation().isBlank()) {
 
@@ -129,6 +153,8 @@ public class ConsultationService {
     }
 
     public List<Schedule> getArchitectSchedules(UUID architectId) {
+        log.info("Consultation Service : getArchitectSchedules - Fetching schedules for architect: {}", architectId);
+
         // 1) fetch all future bookings for this architect
         LocalDateTime now = LocalDateTime.now();
         List<Consultation> upcoming = consultationRepository
@@ -141,6 +167,10 @@ public class ConsultationService {
 
     public List<Consultation> getAllConsultsByArchitectId(UUID architectId, String type, String status,
             Boolean includeCancelled, Boolean upcoming) {
+
+        log.info(
+                "Consultation Service : getAllConsultsByArchitectId - Fetching consultations for architect: {}, type: {}, status: {}, includeCancelled: {}, upcoming: {}",
+                architectId, type, status, includeCancelled, upcoming);
 
         List<Consultation> consults;
 
@@ -180,6 +210,13 @@ public class ConsultationService {
 
     public List<GetConsultationResponse> getAllConsults(String type, String status, Boolean includeCancelled,
             Boolean upcoming, UUID requestingUserId) {
+
+        log.info(
+                "Consultation Service : getAllConsults - Fetching all consultations with type: {}, status: {}, includeCancelled: {}, upcoming: {}, "
+                        +
+                        "requestingUserId: {}",
+                type, status, includeCancelled, upcoming, requestingUserId);
+
         // Get base dataset
         List<Consultation> consults;
 
@@ -236,6 +273,9 @@ public class ConsultationService {
 
     public List<UUID> getAllContactedArchitects(UUID userId) {
 
+        log.info("Consultation Service : getAllContactedArchitects - Fetching all contacted architects for user: {}",
+                userId);
+
         // Filter The consultation must be in a status "scheduled" and "in-progress"
         List<String> activeStatuses = List.of(
                 ConsultationStatus.SCHEDULED.getStatus(),
@@ -248,6 +288,9 @@ public class ConsultationService {
     }
 
     public GetConsultationResponse getConsultById(UUID consultId) {
+
+        log.info("Consultation Service : getConsultById - Fetching consultation: {}", consultId);
+
         Consultation consultation = consultationRepository.findById(consultId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
 
@@ -256,18 +299,16 @@ public class ConsultationService {
         Architect architect = architectRepository.findById(consultation.getArchitectId())
                 .orElseThrow(() -> new BadRequestException("Architect not found"));
 
-        // return GetConsultationResponse.builder().architectCity(architect.getCity())
-        // .architectName(architect.getUsername())
-        // .consultation(consultation)
-        // .userCity(user.getCity())
-        // .userName(user.getUsername())
-        // .build();
-
         return ConsultationUtils.toGetConsultationResponse(consultation, user, architect);
     }
 
     public List<Consultation> getUserConsultations(UUID userId, String type, String status,
             Boolean includeCancelled, Boolean upcoming) {
+
+        log.info(
+                "Consultation Service : getUserConsultations - Fetching consultations for user: {}, type: {}, status: {}, includeCancelled: {}, upcoming: {}",
+                userId, type, status, includeCancelled, upcoming);
+
         // Get base dataset
         List<Consultation> consults;
 
@@ -307,6 +348,8 @@ public class ConsultationService {
 
     public UUID approveConsultation(UUID consultationId) {
 
+        log.info("Consultation Service : approveConsultation - Approving consultation: {}", consultationId);
+
         Consultation consult = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
 
@@ -319,10 +362,15 @@ public class ConsultationService {
 
         UUID roomId = roomService.createRoom(roomRequest);
 
+        log.info("Consultation Service : approveConsultation - Room created with ID: {}", roomId);
+
         consult.setStatus(ConsultationStatus.SCHEDULED.getStatus());
         consult.setRoomId(roomId);
 
         consultationRepository.save(consult);
+
+        log.info("Consultation Service : approveConsultation - Consultation {} status updated to SCHEDULED",
+                consultationId);
 
         confirmationService.notifyApproved(consultationId.toString());
 

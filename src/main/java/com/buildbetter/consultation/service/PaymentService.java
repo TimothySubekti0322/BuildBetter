@@ -69,14 +69,19 @@ public class PaymentService {
                 if (isExpired) {
                         consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
                         consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
+                        consultation.setCreatedAt(LocalDateTime.now());
                         consultationRepository.save(consultation);
+
+                        log.info("Consultation Service : consultation CreatedAt is set to now : {}",
+                                        consultation.getCreatedAt());
 
                         confirmationService.notifyRejected(consultationId.toString(),
                                         CancellationReason.INVALID_PAYMENT);
 
                         consultationService.rejectConsultation(consultationId, new RejectConsultationRequest(
                                         CancellationReason.INVALID_PAYMENT.getReason()));
-                        throw new BadRequestException("Consultation is expired");
+
+                        throw new BadRequestException("Consultation payment is expired");
                 }
 
                 log.info("Consultation Service : Upload proof of payment to S3");

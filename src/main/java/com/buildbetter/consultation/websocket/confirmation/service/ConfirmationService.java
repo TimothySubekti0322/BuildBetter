@@ -19,6 +19,10 @@ public class ConfirmationService {
     private final ObjectMapper objectMapper;
 
     public void notifyApproved(String consultationId) {
+
+        log.info("ConfirmationService (Websocket) : notifyApproved - Broadcasting approval for consultation {}",
+                consultationId);
+
         try {
             String payload = objectMapper.writeValueAsString(
                     ConfirmationMessage.builder()
@@ -27,6 +31,8 @@ public class ConfirmationService {
                             .message("Your consultation has been approved")
                             .timestamp(Instant.now())
                             .build());
+
+            log.info("ConfirmationService (Websocket) : notifyApproved - Payload: {}", payload);
             confirmationSessionManager.broadcastWaiting(consultationId, payload);
         } catch (Exception e) {
             log.error("Error broadcasting approval", e);
@@ -34,6 +40,8 @@ public class ConfirmationService {
     }
 
     public void notifyRejected(String consultationId, CancellationReason reason) {
+        log.info("ConfirmationService (Websocket) : notifyRejected - Broadcasting rejection for consultation {}",
+                consultationId);
         try {
             String payload = objectMapper.writeValueAsString(
                     ConfirmationMessage.builder()
@@ -42,6 +50,8 @@ public class ConfirmationService {
                             .message(reason.getReason())
                             .timestamp(Instant.now())
                             .build());
+
+            log.info("ConfirmationService (Websocket) : notifyRejected - Payload: {}", payload);
             confirmationSessionManager.broadcastWaiting(consultationId, payload);
         } catch (Exception e) {
             log.error("Error broadcasting approval", e);

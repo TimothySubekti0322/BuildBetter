@@ -95,7 +95,7 @@ public class ConsultationUtils {
                 .location(consultation.getLocation())
                 .startDate(consultation.getStartDate())
                 .endDate(consultation.getEndDate())
-                .startTime(consultation.getStartDate())
+                .createdAt(consultation.getCreatedAt())
                 .build();
     }
 }

@@ -16,12 +16,19 @@ public class ConfirmationSessionManager {
     private final ConcurrentHashMap<String, CopyOnWriteArraySet<WebSocketSession>> confirmationSessions = new ConcurrentHashMap<>();
 
     public void addWaitingSession(String consultationId, WebSocketSession session) {
+        log.info(
+                "ConfirmationSessionManager (Websocket) : addWaitingSession - Adding session for consultationId: {}",
+                consultationId);
+
         confirmationSessions
                 .computeIfAbsent(consultationId, id -> new CopyOnWriteArraySet<>())
                 .add(session);
     }
 
     public void removeWaitingSession(String consultationId, WebSocketSession session) {
+        log.info(
+                "ConfirmationSessionManager (Websocket) : removeWaitingSession - Removing session for consultationId: {}",
+                consultationId);
         var set = confirmationSessions.get(consultationId);
         if (set != null) {
             set.remove(session);
@@ -31,6 +38,9 @@ public class ConfirmationSessionManager {
     }
 
     public void broadcastWaiting(String consultationId, String payload) {
+        log.info(
+                "ConfirmationSessionManager (Websocket) : broadcastWaiting - Broadcasting waiting message for consultationId: {}",
+                consultationId);
         var set = confirmationSessions.get(consultationId);
         if (set != null) {
             for (WebSocketSession ws : set) {
@@ -44,6 +54,9 @@ public class ConfirmationSessionManager {
                 }
             }
         }
+        log.info(
+                "ConfirmationSessionManager (Websocket) : broadcastWaiting - Finished broadcasting Confirmation message for consultationId: {}",
+                consultationId);
     }
 
     // Utility methods

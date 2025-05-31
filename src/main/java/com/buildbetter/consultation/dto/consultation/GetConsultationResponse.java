@@ -28,5 +28,5 @@ public class GetConsultationResponse {
     private String location;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
-    private LocalDateTime startTime;
+    private LocalDateTime createdAt;
 }

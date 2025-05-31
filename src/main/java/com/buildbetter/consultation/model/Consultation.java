@@ -60,6 +60,6 @@ public class Consultation {
     private LocalDateTime endDate;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false, nullable = false, columnDefinition = "TIMESTAMPT DEFAULT now()")
+    @Column(name = "created_at", updatable = true, nullable = false, columnDefinition = "TIMESTAMPT DEFAULT now()")
     private LocalDateTime createdAt;
 }
