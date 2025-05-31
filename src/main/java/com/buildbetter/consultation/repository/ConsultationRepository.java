@@ -61,11 +61,11 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
       Collection<String> statuses,
       LocalDateTime now);
 
-  boolean existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
-      UUID architectId,
-      UUID userId,
-      Collection<String> statuses,
-      LocalDateTime now);
+  // boolean existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
+  //     UUID architectId,
+  //     UUID userId,
+  //     Collection<String> statuses,
+  //     LocalDateTime now);
 
   @Query("""
         SELECT DISTINCT c.architectId

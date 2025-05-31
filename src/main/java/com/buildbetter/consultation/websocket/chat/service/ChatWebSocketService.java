@@ -25,6 +25,7 @@ public class ChatWebSocketService {
         Chat entity = Chat.builder()
                 .roomId(inbound.getRoomId())
                 .sender(inbound.getSender())
+                .senderRole(inbound.getSenderRole())
                 .content(inbound.getContent())
                 .type(inbound.getType())
                 .createdAt(now)

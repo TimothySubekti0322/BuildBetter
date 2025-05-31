@@ -1,0 +1,1 @@
+ALTER TABLE chats ADD COLUMN sender_role TEXT;

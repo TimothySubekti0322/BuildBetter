@@ -34,6 +34,9 @@ public class Chat {
     @Column(name = "sender", nullable = false)
     private UUID sender;
 
+    @Column(name = "sender_role", nullable = false)
+    private String senderRole; // architect or user role
+
     @Column(name = "content", nullable = false)
     private String content;
 

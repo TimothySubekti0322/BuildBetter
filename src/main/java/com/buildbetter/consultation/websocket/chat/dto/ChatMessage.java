@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class ChatMessage {
     private UUID roomId;
     private UUID sender; // architectId OR userId
+    private String senderRole; // architect or user role
     private String content; // plain text for now
     private String type; // e.g. "TEXT", "IMAGE" – keep flexible
     private LocalDateTime sentAt; // filled by server
