@@ -23,8 +23,8 @@ import com.buildbetter.consultation.dto.architect.LoginRequest;
 import com.buildbetter.consultation.dto.architect.LoginResponse;
 import com.buildbetter.consultation.dto.architect.RegisterArchitectRequest;
 import com.buildbetter.consultation.dto.architect.UpdateArchitectRequest;
+import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.Schedule;
-import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.service.ArchitectService;
 import com.buildbetter.consultation.service.ConsultationService;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
@@ -187,18 +187,18 @@ public class ArchitectController {
 
     @GetMapping("/{id}/consultations")
     @IsAdminOrArchitect
-    public ApiResponseWithData<List<Consultation>> getAllArchitectConsults(@PathVariable UUID id,
+    public ApiResponseWithData<List<GetConsultationResponse>> getAllArchitectConsults(@PathVariable UUID id,
             @RequestParam(value = "type", required = false) String type,
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "includeCancelled", required = false) Boolean includeCancelled,
             @RequestParam(value = "upcoming", required = false) Boolean upcoming) {
         log.info("Architect Controller : getAllArchitectConsults");
 
-        List<Consultation> consults = consultationService.getAllConsultsByArchitectId(id, type, status,
+        List<GetConsultationResponse> consults = consultationService.getAllConsultsByArchitectId(id, type, status,
                 includeCancelled,
                 upcoming);
 
-        ApiResponseWithData<List<Consultation>> response = new ApiResponseWithData<>();
+        ApiResponseWithData<List<GetConsultationResponse>> response = new ApiResponseWithData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setData(consults);
@@ -218,5 +218,5 @@ public class ArchitectController {
 
         return response;
     }
-
+    
 }

@@ -14,7 +14,7 @@ import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.Schedule;
 import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
-import com.buildbetter.user.dto.user.GetUserNameAndCity;
+import com.buildbetter.user.api.GetUserNameAndCity;
 
 import lombok.NoArgsConstructor;
 
@@ -94,6 +94,8 @@ public class ConsultationUtils {
                 .reason(consultation.getReason())
                 .location(consultation.getLocation())
                 .locationDescription(consultation.getLocationDescription())
+                .paymentAttempt(
+                        consultation.getPayment() != null ? consultation.getPayment().getUploadProofPayment() : 0)
                 .startDate(consultation.getStartDate())
                 .endDate(consultation.getEndDate())
                 .createdAt(consultation.getCreatedAt())

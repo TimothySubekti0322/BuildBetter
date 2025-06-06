@@ -56,16 +56,20 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
 
   List<Consultation> findByUserIdOrderByStartDate(UUID userId);
 
+  List<Consultation> findByUserIdAndStatusIn(UUID userId, Collection<String> statuses);
+
+  List<Consultation> findAllByStatusIn(Collection<String> statuses);
+
   Consultation findByArchitectIdAndUserIdAndStatusInAndEndDateAfter(UUID architectId,
       UUID userId,
       Collection<String> statuses,
       LocalDateTime now);
 
   // boolean existsByArchitectIdAndUserIdAndStatusInAndEndDateAfter(
-  //     UUID architectId,
-  //     UUID userId,
-  //     Collection<String> statuses,
-  //     LocalDateTime now);
+  // UUID architectId,
+  // UUID userId,
+  // Collection<String> statuses,
+  // LocalDateTime now);
 
   @Query("""
         SELECT DISTINCT c.architectId

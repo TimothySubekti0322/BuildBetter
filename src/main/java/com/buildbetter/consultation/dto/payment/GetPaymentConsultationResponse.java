@@ -1,4 +1,4 @@
-package com.buildbetter.consultation.dto.consultation;
+package com.buildbetter.consultation.dto.payment;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -9,17 +9,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Builder
-public class GetConsultationResponse {
-    private UUID id;
+@NoArgsConstructor
+@AllArgsConstructor
+public class GetPaymentConsultationResponse {
+
+    // Payment fields
+    private UUID paymentId;
+    private String proofPayment;
+    private Integer uploadProofPayment;
+    private String paymentMethod;
+    private String sender;
+
+    // Consultation fields
+    private UUID consultationId;
     private UUID userId;
-    private String userName;
-    private String userCity;
     private UUID architectId;
-    private String architectName;
-    private String architectCity;
     private UUID roomId;
     private String type;
     private Integer total;
@@ -27,8 +32,8 @@ public class GetConsultationResponse {
     private String reason;
     private String location;
     private String locationDescription;
-    private Integer paymentAttempt;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private LocalDateTime createdAt;
+
 }

@@ -1,9 +1,7 @@
-package com.buildbetter.user;
+package com.buildbetter.user.api;
 
 import java.util.Map;
 import java.util.UUID;
-
-import com.buildbetter.user.dto.user.GetUserNameAndCity;
 
 public interface UserAPI {
     boolean existsById(UUID userId);

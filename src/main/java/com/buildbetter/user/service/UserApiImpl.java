@@ -7,8 +7,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.buildbetter.user.UserAPI;
-import com.buildbetter.user.dto.user.GetUserNameAndCity;
+import com.buildbetter.user.api.GetUserNameAndCity;
+import com.buildbetter.user.api.UserAPI;
 import com.buildbetter.user.model.User;
 import com.buildbetter.user.repository.UserRepository;
 

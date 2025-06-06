@@ -2,14 +2,13 @@ package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
 import com.buildbetter.consultation.constant.CancellationReason;
 import com.buildbetter.consultation.constant.ConsultationStatus;
-import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
+import com.buildbetter.consultation.dto.payment.GetPaymentConsultationResponse;
 import com.buildbetter.consultation.dto.payment.UploadPaymentConsultationRequest;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Payment;
@@ -18,6 +17,7 @@ import com.buildbetter.consultation.repository.PaymentRepository;
 import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.constant.S3Folder;
 import com.buildbetter.shared.exception.BadRequestException;
+import com.buildbetter.shared.exception.ForbiddenException;
 import com.buildbetter.shared.util.S3Service;
 
 import lombok.RequiredArgsConstructor;
@@ -40,26 +40,46 @@ public class PaymentService {
                 Consultation consultation = consultationRepository.findById(consultationId)
                                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
 
-                Optional<Payment> existingPayment = paymentRepository.findByConsultationId(consultationId);
+                // Optional<Payment> existingPayment =
+                // paymentRepository.findByConsultationIdExplicit(consultationId);
 
-                Integer numberOfUploadProofOfPayment = existingPayment.isPresent()
-                                ? existingPayment.get().getUploadProofPayment()
+                Payment existingPayment = consultation.getPayment();
+
+                if (existingPayment == null) {
+                        existingPayment = new Payment();
+                        existingPayment.setConsultation(consultation);
+                        existingPayment.setPaymentMethod("");
+                        existingPayment.setProofPayment("");
+                        existingPayment.setSender("");
+                        existingPayment.setUploadProofPayment(0);
+                }
+
+                Integer numberOfUploadProofOfPayment = existingPayment != null
+                                ? existingPayment.getUploadProofPayment()
                                 : 0;
 
                 log.info("ConsultationService : Check Consultation status");
                 Boolean statusIsWaitingForPayment = ConsultationStatus.WAITING_FOR_PAYMENT.getStatus()
                                 .equalsIgnoreCase(consultation.getStatus());
 
-                Boolean statusIsCancelledDueToInvalidPayment = ConsultationStatus.CANCELLED.getStatus()
-                                .equals(consultation.getStatus())
-                                && CancellationReason.INVALID_PAYMENT.getReason()
-                                                .equalsIgnoreCase(consultation.getReason());
+                // Boolean statusIsCancelledDueToInvalidPayment =
+                // ConsultationStatus.CANCELLED.getStatus()
+                // .equals(consultation.getStatus())
+                // && CancellationReason.INVALID_PAYMENT.getReason()
+                // .equalsIgnoreCase(consultation.getReason());
 
-                Boolean statusIsCancelledDueToInvalidPaymentAndNeverRetried = statusIsCancelledDueToInvalidPayment
-                                && numberOfUploadProofOfPayment < 2;
+                // If Status is not waiting for payment or cancelled due to invalid payment
+                // if (!statusIsWaitingForPayment && !statusIsCancelledDueToInvalidPayment) {
+                // throw new BadRequestException("Consultation is not in a valid state for
+                // payment");
+                // }
 
-                if (!statusIsWaitingForPayment && !statusIsCancelledDueToInvalidPaymentAndNeverRetried) {
-                        throw new BadRequestException("Consultation is not in a valid state for payment");
+                if (!statusIsWaitingForPayment) {
+                        throw new BadRequestException("Consultation is not in waiting for payment state");
+                }
+
+                if (numberOfUploadProofOfPayment >= 2) {
+                        throw new ForbiddenException("Payment Attempt limit reached");
                 }
 
                 Boolean isExpired = LocalDateTime.now().isAfter(consultation.getCreatedAt()
@@ -67,6 +87,11 @@ public class PaymentService {
 
                 log.info("ConsultationService : Check if consultation payment is expired");
                 if (isExpired) {
+                        // Update Payment Attempt
+                        existingPayment.setUploadProofPayment(numberOfUploadProofOfPayment + 1);
+                        paymentRepository.save(existingPayment);
+
+                        // Update Consultation status to cancelled
                         consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
                         consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
                         consultation.setCreatedAt(LocalDateTime.now());
@@ -75,12 +100,6 @@ public class PaymentService {
                         log.info("Consultation Service : consultation CreatedAt is set to now : {}",
                                         consultation.getCreatedAt());
 
-                        confirmationService.notifyRejected(consultationId.toString(),
-                                        CancellationReason.INVALID_PAYMENT);
-
-                        consultationService.rejectConsultation(consultationId, new RejectConsultationRequest(
-                                        CancellationReason.INVALID_PAYMENT.getReason()));
-
                         throw new BadRequestException("Consultation payment is expired");
                 }
 
@@ -88,32 +107,23 @@ public class PaymentService {
                 String proofUrl = s3Service.uploadFile(request.getImage(), S3Folder.PROOF_OF_PAYMENTS,
                                 consultationId.toString());
 
-                if (existingPayment.isPresent() && !existingPayment.get().getProofPayment().isBlank()) {
+                if (existingPayment != null && !existingPayment.getProofPayment().isBlank()) {
                         log.info("Payment Service : UploadPaymentProof - Delete existing proof of payment");
-                        s3Service.deleteFile(existingPayment.get().getProofPayment());
+                        s3Service.deleteFile(existingPayment.getProofPayment());
                 }
 
-                Payment payment = existingPayment.orElseGet(() -> Payment.builder()
-                                .consultationId(consultationId)
-                                .uploadProofPayment(0)
-                                .build());
+                existingPayment.setUploadProofPayment(existingPayment.getUploadProofPayment() + 1);
 
-                if (payment.getUploadProofPayment() == 0 && statusIsCancelledDueToInvalidPaymentAndNeverRetried) {
-                        payment.setUploadProofPayment(2);
-                }
+                existingPayment.setProofPayment(proofUrl);
+                existingPayment.setPaymentMethod(request.getPaymentMethod());
+                existingPayment.setSender(request.getSender());
 
-                payment.setUploadProofPayment(payment.getUploadProofPayment() + 1);
-
-                payment.setProofPayment(proofUrl);
-                payment.setPaymentMethod(request.getPaymentMethod());
-                payment.setSender(request.getSender());
-
-                paymentRepository.save(payment);
+                paymentRepository.save(existingPayment);
 
                 consultation.setStatus(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus());
                 consultationRepository.save(consultation);
 
-                return payment.getId();
+                return existingPayment.getId();
         }
 
         public List<Payment> getAllPayments() {
@@ -127,10 +137,42 @@ public class PaymentService {
                                 .orElseThrow(() -> new BadRequestException("Payment not found"));
         }
 
-        public Payment getConsultationPayment(UUID consultationId) {
+        public GetPaymentConsultationResponse getConsultationPayment(UUID consultationId) {
                 log.info("Payment Service : getConsultationPayment");
-                return paymentRepository.findByConsultationId(consultationId)
-                                .orElseThrow(() -> new BadRequestException("Payment not found for consultation"));
+
+                Consultation consultation = consultationRepository.findById(consultationId)
+                                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+                Payment payment = consultation.getPayment();
+
+                if (payment == null) {
+                        throw new BadRequestException("Payment not found for consultation");
+                }
+
+                GetPaymentConsultationResponse response = new GetPaymentConsultationResponse();
+                // Set payment details
+                response.setPaymentId(payment.getId());
+                response.setProofPayment(payment.getProofPayment());
+                response.setUploadProofPayment(payment.getUploadProofPayment());
+                response.setPaymentMethod(payment.getPaymentMethod());
+                response.setSender(payment.getSender());
+
+                // Set consultation details
+                response.setConsultationId(consultation.getId());
+                response.setUserId(consultation.getUserId());
+                response.setArchitectId(consultation.getArchitectId());
+                response.setRoomId(consultation.getRoomId());
+                response.setType(consultation.getType());
+                response.setTotal(consultation.getTotal());
+                response.setStatus(consultation.getStatus());
+                response.setReason(consultation.getReason());
+                response.setLocation(consultation.getLocation());
+                response.setLocationDescription(consultation.getLocationDescription());
+                response.setStartDate(consultation.getStartDate());
+                response.setEndDate(consultation.getEndDate());
+                response.setCreatedAt(consultation.getCreatedAt());
+
+                return response;
         }
 
         public void deletePayment(UUID id) {
@@ -152,5 +194,93 @@ public class PaymentService {
 
                 paymentRepository.delete(payment);
 
+        }
+
+        public Integer markPaymentAsExpired(UUID consultationId) {
+                log.info("Payment Service : markPaymentAsExpired");
+                Consultation consultation = consultationRepository.findById(consultationId)
+                                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+                Integer attempt = consultation.getPayment() != null
+                                ? consultation.getPayment().getUploadProofPayment()
+                                : 0;
+
+                Boolean isWaitingForPayment = ConsultationStatus.WAITING_FOR_PAYMENT.getStatus()
+                                .equalsIgnoreCase(consultation.getStatus());
+
+                Boolean isCancelledDueToInvalidPayment = ConsultationStatus.CANCELLED.getStatus()
+                                .equalsIgnoreCase(consultation.getStatus())
+                                && CancellationReason.INVALID_PAYMENT.getReason()
+                                                .equalsIgnoreCase(consultation.getReason());
+
+                if (Boolean.FALSE.equals(isWaitingForPayment) &&
+                                Boolean.FALSE.equals(isCancelledDueToInvalidPayment)) {
+                        throw new BadRequestException(
+                                        "Consultation is not in a valid state to mark payment as expired");
+                }
+
+                if (attempt >= 2) {
+                        throw new ForbiddenException("Payment Attempt limit reached");
+                }
+
+                Integer newAttempt = attempt + 1;
+
+                Payment existingPayment = consultation.getPayment();
+
+                if (existingPayment == null) {
+                        existingPayment = Payment.builder()
+                                        .proofPayment("")
+                                        .uploadProofPayment(newAttempt)
+                                        .sender("")
+                                        .paymentMethod("")
+                                        .build();
+
+                        existingPayment.setConsultation(consultation);
+                }
+
+                existingPayment.setUploadProofPayment(newAttempt);
+
+                paymentRepository.save(existingPayment);
+
+                consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
+                consultationRepository.save(consultation);
+
+                return newAttempt;
+        }
+
+        public void repayPayment(UUID consultationId) {
+                log.info("Payment Service : repayPayment");
+                Consultation consultation = consultationRepository.findById(consultationId)
+                                .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+                Payment payment = consultation.getPayment();
+
+                log.info("Payment Service : Check Consultation status");
+
+                Boolean statusIsWaitingForPayment = ConsultationStatus.WAITING_FOR_PAYMENT.getStatus()
+                                .equalsIgnoreCase(consultation.getStatus());
+                Boolean statusIsCancelledDueToInvalidPayment = ConsultationStatus.CANCELLED.getStatus()
+                                .equalsIgnoreCase(consultation.getStatus())
+                                && CancellationReason.INVALID_PAYMENT.getReason()
+                                                .equalsIgnoreCase(consultation.getReason());
+
+                if (Boolean.FALSE.equals(statusIsWaitingForPayment) &&
+                                Boolean.FALSE.equals(statusIsCancelledDueToInvalidPayment)) {
+                        throw new BadRequestException(
+                                        "Consultation is not in a valid state to repay payment");
+                }
+
+                log.info("Payment Service : Check Payment status");
+                if (payment != null && payment.getUploadProofPayment() >= 2) {
+                        throw new ForbiddenException("Payment Attempt limit reached");
+                }
+
+                consultation.setStatus(ConsultationStatus.WAITING_FOR_PAYMENT.getStatus());
+                consultation.setReason(null);
+                consultation.setCreatedAt(LocalDateTime.now());
+                consultationRepository.save(consultation);
+
+                log.info("Payment Service : repayPayment - Consultation status set to WAITING_FOR_PAYMENT, reason to null, and createdAt to now");
         }
 }

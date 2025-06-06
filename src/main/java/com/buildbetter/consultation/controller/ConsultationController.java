@@ -18,7 +18,7 @@ import com.buildbetter.consultation.dto.consultation.CreateConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.GetConsultationResponse;
 import com.buildbetter.consultation.dto.consultation.RejectConsultationRequest;
 import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
-import com.buildbetter.consultation.model.Payment;
+import com.buildbetter.consultation.dto.payment.GetPaymentConsultationResponse;
 import com.buildbetter.consultation.service.ConsultationService;
 import com.buildbetter.consultation.service.PaymentService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
@@ -118,12 +118,13 @@ public class ConsultationController {
     }
 
     @GetMapping("/consultations/{consultationId}/payments")
-    public ApiResponseMessageAndData<Payment> getConsultationPayment(@PathVariable UUID consultationId) {
+    public ApiResponseMessageAndData<GetPaymentConsultationResponse> getConsultationPayment(
+            @PathVariable UUID consultationId) {
         log.info("Consult Controller : getConsultationPayment");
 
-        Payment payment = paymentService.getConsultationPayment(consultationId);
+        GetPaymentConsultationResponse payment = paymentService.getConsultationPayment(consultationId);
 
-        ApiResponseMessageAndData<Payment> response = new ApiResponseMessageAndData<>();
+        ApiResponseMessageAndData<GetPaymentConsultationResponse> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Payment fetched successfully");
@@ -227,6 +228,25 @@ public class ConsultationController {
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
         response.setMessage("Consultation updated successfully");
+        return response;
+    }
+
+    @PostMapping("/consultations/refresh")
+    @Authenticated
+    public ApiResponseMessageOnly refreshConsultation(Authentication auth) {
+        log.info("Consult Controller : refreshConsultation");
+
+        log.info("Consult Controller : refreshConsultation - Parse JWT Authentication");
+        JwtAuthentication jwt = (JwtAuthentication) auth;
+        UUID userId = UUID.fromString(jwt.claim("id"));
+        String role = jwt.claim("role");
+
+        consultationService.refreshConsultations(userId, role);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Consultations refreshed successfully");
         return response;
     }
 

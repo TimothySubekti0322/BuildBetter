@@ -18,11 +18,14 @@ import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.service.PaymentService;
 import com.buildbetter.shared.dto.ApiResponseMessageAndData;
 import com.buildbetter.shared.dto.ApiResponseMessageOnly;
+import com.buildbetter.shared.security.annotation.Authenticated;
 import com.buildbetter.shared.security.annotation.IsAdmin;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.RequestBody;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -86,4 +89,36 @@ public class PaymentController {
         response.setMessage("Payment deleted successfully");
         return response;
     }
+
+    @PostMapping("/{consultationId}/expired")
+    @Authenticated
+    public ApiResponseMessageOnly markPaymentAsExpired(@PathVariable UUID consultationId) {
+        log.info("Payment Controller : markPaymentAsExpired");
+
+        Integer attempt = paymentService.markPaymentAsExpired(consultationId);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Payment for consultation {" + consultationId
+                + "} marked as expired successfully. Attempt: " + attempt);
+
+        return response;
+    }
+
+    @PostMapping("/{consultationId}/repay")
+    @Authenticated
+    public ApiResponseMessageOnly repayPayment(@PathVariable UUID consultationId) {
+        log.info("Payment Controller : repayPayment");
+
+        paymentService.repayPayment(consultationId);
+
+        ApiResponseMessageOnly response = new ApiResponseMessageOnly();
+        response.setCode(HttpStatus.OK.value());
+        response.setStatus(HttpStatus.OK.name());
+        response.setMessage("Payment for consultation {" + consultationId + "} has been successfully repaid.");
+
+        return response;
+    }
+
 }

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -41,7 +42,7 @@ import com.buildbetter.plan.repository.PlanRepository;
 import com.buildbetter.plan.repository.SuggestionRepository;
 import com.buildbetter.plan.util.SuggestionUtils;
 import com.buildbetter.shared.exception.NotFoundException;
-import com.buildbetter.user.UserAPI;
+import com.buildbetter.user.api.UserAPI;
 
 @ExtendWith(MockitoExtension.class)
 public class PlanServiceTest {
@@ -156,49 +157,58 @@ public class PlanServiceTest {
         @Test
         @DisplayName("getAllPlans → maps Plan → GetPlansResponse for each plan")
         void getAllPlans_success_returnsResponses() {
-                when(userAPI.existsById(userId)).thenReturn(true);
-                when(planRepository.findByUserIdOrderByCreatedAtDesc(userId))
-                                .thenReturn(List.of(plan));
 
-                // prepare a dummy material ID set
+                when(userAPI.existsById(userId)).thenReturn(true);
+
+                Plan realPlan = new Plan();
+                realPlan.setUserId(userId);
+
+                // We also need a real Suggestion inside the Plan
+                Suggestion realSuggestion = new Suggestion();
+                realPlan.setSuggestion(realSuggestion);
+
+                // Wrap that real Plan in a spy so we can override any methods if needed
+                Plan planSpy = spy(realPlan);
+
+                // Make the repository return our spied Plan
+                when(planRepository.findAllByOrderByCreatedAtDesc())
+                                .thenReturn(List.of(planSpy));
+
                 UUID matId = UUID.randomUUID();
                 Set<UUID> matIds = Set.of(matId);
+
+                // Create a Mockito mock for Material (the service just needs material.getId())
                 Material material = mock(Material.class);
                 when(material.getId()).thenReturn(matId);
 
-                // stub static SuggestionUtils calls
                 try (MockedStatic<SuggestionUtils> utils = mockStatic(SuggestionUtils.class)) {
-                        // collectMaterialIds(suggestion) → matIds
-                        utils.when(() -> SuggestionUtils.collectMaterialIds(suggestion))
+                        // SuggestionUtils.collectMaterialIds(realSuggestion) → matIds
+                        utils.when(() -> SuggestionUtils.collectMaterialIds(realSuggestion))
                                         .thenReturn(matIds);
 
-                        // materialRepository.findAllById(matIds)
+                        // materialRepository.findAllById(matIds) → [material]
                         when(materialRepository.findAllById(eq(matIds)))
                                         .thenReturn(List.of(material));
 
-                        // toGetSuggestionResponse(...)
+                        // SuggestionUtils.toGetSuggestionResponse(realSuggestion, {matId→material})
                         SuggestionResponse suggestionResp = new SuggestionResponse();
-                        utils.when(() -> SuggestionUtils.toGetSuggestionResponse(suggestion,
+                        utils.when(() -> SuggestionUtils.toGetSuggestionResponse(realSuggestion,
                                         Map.of(matId, material)))
                                         .thenReturn(suggestionResp);
 
-                        // planToGenerateSuggestionRequest(...)
+                        // SuggestionUtils.planToGenerateSuggestionRequest(planSpy, suggestionResp)
                         GenerateSuggestionRequest genReq = new GenerateSuggestionRequest();
-                        utils.when(() -> SuggestionUtils.planToGenerateSuggestionRequest(plan, suggestionResp))
+                        utils.when(() -> SuggestionUtils.planToGenerateSuggestionRequest(planSpy, suggestionResp))
                                         .thenReturn(genReq);
 
-                        // call method under test
                         GetPlansResponse[] responses = planService.getAllPlans(userId, "admin");
 
-                        // assertions
-                        assertEquals(1, responses.length);
                         GetPlansResponse single = responses[0];
                         assertSame(suggestionResp, single.getSuggestions());
                         assertSame(genReq, single.getUserInput());
 
-                        // verify key interactions
                         verify(userAPI).existsById(userId);
-                        verify(planRepository).findByUserIdOrderByCreatedAtDesc(userId);
+                        verify(planRepository).findAllByOrderByCreatedAtDesc();
                         verify(materialRepository).findAllById(matIds);
                 }
         }

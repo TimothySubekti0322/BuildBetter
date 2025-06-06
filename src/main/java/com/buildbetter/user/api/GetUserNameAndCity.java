@@ -1,4 +1,4 @@
-package com.buildbetter.user.dto.user;
+package com.buildbetter.user.api;
 
 import java.util.UUID;
 

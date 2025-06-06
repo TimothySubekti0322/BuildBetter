@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.buildbetter.consultation.model.Payment;
@@ -15,5 +17,6 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByPaymentMethod(String paymentMethod);
 
-    Optional<Payment> findByConsultationId(UUID id);
+    @Query("SELECT p FROM Payment p WHERE p.consultation.id = :consultationId")
+    Optional<Payment> findByConsultationIdExplicit(@Param("consultationId") UUID consultationId);
 }

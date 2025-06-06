@@ -20,7 +20,7 @@ import com.buildbetter.plan.repository.PlanRepository;
 import com.buildbetter.plan.repository.SuggestionRepository;
 import com.buildbetter.plan.util.SuggestionUtils;
 import com.buildbetter.shared.exception.NotFoundException;
-import com.buildbetter.user.UserAPI;
+import com.buildbetter.user.api.UserAPI;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +74,7 @@ public class PlanService {
 
                 // Get All Plans
                 List<Plan> plans;
-                if (role == "admin") {
+                if ("admin".equals(role)) {
                         plans = planRepository.findAllByOrderByCreatedAtDesc();
                 } else {
                         plans = planRepository.findByUserIdOrderByCreatedAtDesc(userId);

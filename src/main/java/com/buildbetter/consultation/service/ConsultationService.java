@@ -1,6 +1,7 @@
 package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -21,13 +22,15 @@ import com.buildbetter.consultation.dto.consultation.UpdateConsultationRequest;
 import com.buildbetter.consultation.dto.room.CreateRoomRequest;
 import com.buildbetter.consultation.model.Architect;
 import com.buildbetter.consultation.model.Consultation;
+import com.buildbetter.consultation.model.Payment;
 import com.buildbetter.consultation.repository.ArchitectRepository;
 import com.buildbetter.consultation.repository.ConsultationRepository;
+import com.buildbetter.consultation.repository.PaymentRepository;
 import com.buildbetter.consultation.util.ConsultationUtils;
 import com.buildbetter.consultation.websocket.confirmation.service.ConfirmationService;
 import com.buildbetter.shared.exception.BadRequestException;
-import com.buildbetter.user.UserAPI;
-import com.buildbetter.user.dto.user.GetUserNameAndCity;
+import com.buildbetter.user.api.GetUserNameAndCity;
+import com.buildbetter.user.api.UserAPI;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +45,7 @@ public class ConsultationService {
     private final ConfirmationService confirmationService;
     private final RoomService roomService;
     private final UserAPI userApi;
+    private final PaymentRepository paymentRepository;
 
     public UUID createConsult(CreateConsultationRequest request, UUID userId) {
         log.info(
@@ -170,7 +174,7 @@ public class ConsultationService {
         return ConsultationUtils.createUpcomingSchedule(upcoming);
     }
 
-    public List<Consultation> getAllConsultsByArchitectId(UUID architectId, String type, String status,
+    public List<GetConsultationResponse> getAllConsultsByArchitectId(UUID architectId, String type, String status,
             Boolean includeCancelled, Boolean upcoming) {
 
         log.info(
@@ -204,11 +208,22 @@ public class ConsultationService {
                 })
                 .filter(consult -> {
                     // Filter out cancelled consults unless explicitly included
-                    if (includeCancelled != null && !includeCancelled) {
-                        return !"CANCELLED".equalsIgnoreCase(consult.getStatus());
+                    if (Boolean.FALSE.equals(includeCancelled)) {
+                        return !ConsultationStatus.CANCELLED.getStatus().equalsIgnoreCase(consult.getStatus());
                     }
                     // If includeCancelled is null or true, include all statuses
                     return true;
+                })
+                .map(consult -> {
+                    // a) load the user‐projection (just id, username, city)
+                    GetUserNameAndCity userProjection = userApi.getUserNameAndCityById(consult.getUserId());
+
+                    // b) load the architect entity (so you can extract name & city)
+                    Architect architect = architectRepository.findById(consult.getArchitectId())
+                            .orElseThrow(() -> new BadRequestException("Architect not found"));
+
+                    // c) build the DTO using your utility
+                    return ConsultationUtils.toGetConsultationResponse(consult, userProjection, architect);
                 })
                 .collect(Collectors.toList());
     }
@@ -336,7 +351,7 @@ public class ConsultationService {
                 // exclude “CANCELLED” unless includeCancelled is true or null
                 .filter(consult -> {
                     if (Boolean.FALSE.equals(includeCancelled)) {
-                        return !"CANCELLED".equalsIgnoreCase(consult.getStatus());
+                        return !ConsultationStatus.CANCELLED.getStatus().equalsIgnoreCase(consult.getStatus());
                     }
                     return true;
                 })
@@ -361,6 +376,20 @@ public class ConsultationService {
 
         Consultation consult = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
+
+        if (!consult.getStatus().equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus())) {
+            throw new BadRequestException("Consultation is not in a state that can be approved");
+        }
+
+        if (consult.getStartDate().isBefore(LocalDateTime.now())) {
+            confirmationService.notifyRejected(consultationId.toString(),
+                    CancellationReason.SYSTEM_CANCELLED);
+
+            consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+            consult.setReason(CancellationReason.SYSTEM_CANCELLED.getReason());
+            consultationRepository.save(consult);
+            throw new BadRequestException("Consultation start date cannot be in the past");
+        }
 
         CreateRoomRequest roomRequest = CreateRoomRequest.builder()
                 .architectId(consult.getArchitectId())
@@ -393,16 +422,35 @@ public class ConsultationService {
 
         CancellationReason reasonMessage = CancellationReason.fromString(reason.getMessage());
 
-        Boolean consultationIsWaitingForConfirmationOrConsultationIsCancelled = consultation.getStatus()
-                .equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus()) ||
-                consultation.getStatus().equals(ConsultationStatus.CANCELLED.getStatus());
+        String consultationStatus = consultation.getStatus();
 
-        if (!consultationIsWaitingForConfirmationOrConsultationIsCancelled) {
+        Boolean consultationIsWaitingForConfirmationOrConsultationIsCancelled = consultationStatus
+                .equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus()) ||
+                consultationStatus.equals(ConsultationStatus.CANCELLED.getStatus());
+
+        if (Boolean.FALSE.equals(consultationIsWaitingForConfirmationOrConsultationIsCancelled)) {
             throw new BadRequestException("Consultation is not in a state that can be cancelled");
         }
 
         consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
         consultation.setReason(reason.getMessage());
+
+        // Payment existingPayment = consultation.getPayment();
+
+        // if (reasonMessage.equals(CancellationReason.INVALID_PAYMENT)) {
+        // if (existingPayment == null) {
+        // existingPayment = Payment.builder()
+        // .paymentMethod("")
+        // .proofPayment("")
+        // .sender("")
+        // .uploadProofPayment(0)
+        // .build();
+        // }
+        // consultation.setPayment(existingPayment);
+
+        // paymentRepository.save(existingPayment);
+        // }
+
         consultationRepository.save(consultation);
 
         confirmationService.notifyRejected(consultationId.toString(), reasonMessage);
@@ -481,4 +529,72 @@ public class ConsultationService {
 
         consultationRepository.save(consultation);
     }
+
+    public void refreshConsultations(UUID userId, String role) {
+        log.info("Consultation Service : refreshConsultations - Refreshing consultations for user: {}", userId);
+
+        Collection<String> activeStatuses = List.of(
+                ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus(),
+                ConsultationStatus.WAITING_FOR_PAYMENT.getStatus());
+
+        List<Consultation> consultations = Collections.emptyList();
+
+        log.info("role : {}", role);
+
+        if ("ADMIN".equals(role)) {
+            consultations = consultationRepository.findAllByStatusIn(activeStatuses);
+        } else if ("USER".equals(role)) {
+            consultations = consultationRepository.findByUserIdAndStatusIn(userId, activeStatuses);
+        }
+
+        if (consultations.isEmpty()) {
+            log.info("No consultations found for user: {}", userId);
+            return;
+        }
+
+        for (Consultation consult : consultations) {
+            log.info("Found consultation: {} with status: {}", consult.getId(), consult.getStatus());
+            if (consult.getStatus().equals(ConsultationStatus.WAITING_FOR_PAYMENT.getStatus())) {
+                // Check if Payment is Expired
+                Boolean isExpired = LocalDateTime.now().isAfter(consult.getCreatedAt()
+                        .plusMinutes(10));
+                if (isExpired) {
+                    log.info("Consultation {} is expired, cancelling due to invalid payment", consult.getId());
+                    Integer numberOfUploadProofOfPayment = consult.hasPayment()
+                            ? consult.getPayment().getUploadProofPayment()
+                            : 0;
+
+                    Payment existingPayment = consult.getPayment();
+                    if (existingPayment == null) {
+                        existingPayment = Payment.builder()
+                                .paymentMethod("")
+                                .proofPayment("")
+                                .sender("")
+                                .uploadProofPayment(0)
+                                .build();
+                        consult.setPayment(existingPayment);
+                    }
+
+                    existingPayment.setUploadProofPayment(numberOfUploadProofOfPayment + 1);
+                    paymentRepository.save(existingPayment);
+
+                    consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                    consult.setReason(CancellationReason.INVALID_PAYMENT.getReason());
+                    consult.setCreatedAt(LocalDateTime.now());
+                    consultationRepository.save(consult);
+                }
+            } else if (consult.getStatus().equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus())) {
+                // Check if Consultation is Expired
+                Boolean isExpired = LocalDateTime.now().isAfter(consult.getStartDate());
+                if (isExpired) {
+                    log.info("Consultation {} is expired, cancelling due to start date in the past", consult.getId());
+                    // Update Consultation
+                    consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                    consult.setReason(CancellationReason.SYSTEM_CANCELLED.getReason());
+                    consultationRepository.save(consult);
+                }
+            }
+        }
+    }
+
 }

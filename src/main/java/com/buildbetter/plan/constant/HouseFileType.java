@@ -2,6 +2,7 @@ package com.buildbetter.plan.constant;
 
 import java.util.Arrays;
 
+import com.buildbetter.shared.exception.BadRequestException;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum HouseFileType {
@@ -56,6 +57,13 @@ public enum HouseFileType {
         return Arrays.stream(values())
                 .filter(type -> type.value.equalsIgnoreCase(value))
                 .findFirst()
-                .orElse(null); // Or throw an IllegalArgumentException if not found
+                .orElseThrow(
+                        () -> new BadRequestException("HouseFileType Enum : Invalid HouseFileType value : " + value)); // Or
+                                                                                                                       // throw
+                                                                                                                       // an
+                                                                                                                       // IllegalArgumentException
+                                                                                                                       // if
+                                                                                                                       // not
+                                                                                                                       // found
     }
 }
