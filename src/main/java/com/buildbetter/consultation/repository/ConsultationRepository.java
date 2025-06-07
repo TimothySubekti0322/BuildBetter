@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.buildbetter.consultation.dto.consultation.ConsultationDateRange;
@@ -83,4 +84,21 @@ public interface ConsultationRepository extends JpaRepository<Consultation, UUID
 
   Optional<Consultation> findByRoomIdAndEndDate(UUID roomId, LocalDateTime endDate);
 
+  @Query("SELECT c FROM Consultation c WHERE " +
+      "c.status IN :pendingStatuses OR " +
+      "(c.status = :cancelledStatus AND c.reason = :invalidPaymentReason)")
+  List<Consultation> findConsultationByStatusInAndStatusCancelledWithSpecificReason(
+      @Param("pendingStatuses") List<String> pendingStatuses,
+      @Param("cancelledStatus") String cancelledStatus,
+      @Param("invalidPaymentReason") String invalidPaymentReason);
+
+  @Query("SELECT c FROM Consultation c WHERE " +
+      "(c.userId = :userId) AND " +
+      "(c.status IN :pendingStatuses OR " +
+      "(c.status = :cancelledStatus AND c.reason = :invalidPaymentReason))")
+  List<Consultation> findConsultationByUserIdAndStatusInAndStatusCancelledWithSpecificReason(
+      @Param("userId") UUID userId,
+      @Param("pendingStatuses") List<String> pendingStatuses,
+      @Param("cancelledStatus") String cancelledStatus,
+      @Param("invalidPaymentReason") String invalidPaymentReason);
 }

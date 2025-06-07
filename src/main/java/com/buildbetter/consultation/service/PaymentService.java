@@ -243,6 +243,13 @@ public class PaymentService {
                 paymentRepository.save(existingPayment);
 
                 consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
+
+                if (newAttempt >= 2) {
+                        consultation.setReason(CancellationReason.SYSTEM_CANCELLED.getReason());
+                } else {
+                        consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
+                }
+
                 consultation.setReason(CancellationReason.INVALID_PAYMENT.getReason());
                 consultationRepository.save(consultation);
 

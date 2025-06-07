@@ -1,7 +1,7 @@
 package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -536,18 +536,26 @@ public class ConsultationService {
     public void refreshConsultations(UUID userId, String role) {
         log.info("Consultation Service : refreshConsultations - Refreshing consultations for user: {}", userId);
 
-        Collection<String> activeStatuses = List.of(
+        List<String> statuses = List.of(
                 ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus(),
-                ConsultationStatus.WAITING_FOR_PAYMENT.getStatus());
+                ConsultationStatus.WAITING_FOR_PAYMENT.getStatus(),
+                ConsultationStatus.SCHEDULED.getStatus());
+
+        String cancelledStatus = ConsultationStatus.CANCELLED.getStatus();
+        String cancelledReason = CancellationReason.INVALID_PAYMENT.getReason();
 
         List<Consultation> consultations = Collections.emptyList();
 
         log.info("role : {}", role);
 
         if ("ADMIN".equals(role)) {
-            consultations = consultationRepository.findAllByStatusIn(activeStatuses);
+            consultations = consultationRepository
+                    .findConsultationByStatusInAndStatusCancelledWithSpecificReason(statuses, cancelledStatus,
+                            cancelledReason);
         } else if ("USER".equals(role)) {
-            consultations = consultationRepository.findByUserIdAndStatusIn(userId, activeStatuses);
+            consultations = consultationRepository
+                    .findConsultationByUserIdAndStatusInAndStatusCancelledWithSpecificReason(userId, statuses,
+                            cancelledStatus, cancelledReason);
         }
 
         if (consultations.isEmpty()) {
@@ -555,47 +563,97 @@ public class ConsultationService {
             return;
         }
 
+        // Batch collections for different types of updates
+        List<Consultation> consultationsToUpdate = new ArrayList<>();
+        List<Payment> paymentsToUpdate = new ArrayList<>();
+        List<Payment> newPaymentsToSave = new ArrayList<>();
+
         for (Consultation consult : consultations) {
             log.info("Found consultation: {} with status: {}", consult.getId(), consult.getStatus());
-            if (consult.getStatus().equals(ConsultationStatus.WAITING_FOR_PAYMENT.getStatus())) {
-                // Check if Payment is Expired
-                Boolean isExpired = LocalDateTime.now().isAfter(consult.getCreatedAt()
-                        .plusMinutes(10));
-                if (isExpired) {
-                    log.info("Consultation {} is expired, cancelling due to invalid payment", consult.getId());
-                    Integer numberOfUploadProofOfPayment = consult.hasPayment()
-                            ? consult.getPayment().getUploadProofPayment()
-                            : 0;
 
-                    Payment existingPayment = consult.getPayment();
-                    if (existingPayment == null) {
-                        existingPayment = Payment.builder()
-                                .paymentMethod("")
-                                .proofPayment("")
-                                .sender("")
-                                .uploadProofPayment(0)
-                                .build();
-                        consult.setPayment(existingPayment);
-                    }
+            Boolean consultationIsOutdated = consult.getStartDate() != null &&
+                    consult.getStartDate().isBefore(LocalDateTime.now());
+            Boolean isExpired = LocalDateTime.now().isAfter(consult.getCreatedAt()
+                    .plusMinutes(10));
+            Boolean isWaitingForPayment = consult.getStatus()
+                    .equals(ConsultationStatus.WAITING_FOR_PAYMENT.getStatus());
+            Boolean isWaitingForConfirmation = consult.getStatus()
+                    .equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus());
+            Boolean isCancelledAndInvalidPayment = consult.getStatus()
+                    .equals(ConsultationStatus.CANCELLED.getStatus()) &&
+                    consult.getReason().equals(CancellationReason.INVALID_PAYMENT.getReason());
+            Boolean isScheduledButRoomExpired = consult.getStatus()
+                    .equals(ConsultationStatus.SCHEDULED.getStatus())
+                    && consult.getEndDate().isBefore(LocalDateTime.now());
 
-                    existingPayment.setUploadProofPayment(numberOfUploadProofOfPayment + 1);
-                    paymentRepository.save(existingPayment);
+            if ((isWaitingForPayment || isWaitingForConfirmation || isCancelledAndInvalidPayment)
+                    && consultationIsOutdated) {
+                log.info("Consultation {} is outdated, cancelling due to system cancellation", consult.getId());
+                consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                consult.setReason(CancellationReason.SYSTEM_CANCELLED.getReason());
+                consultationsToUpdate.add(consult);
+                // consultationRepository.save(consult);
+            }
+            // SPECIAL CASE FOR WAITING FOR PAYMENT (expired)
+            else if (isWaitingForPayment && isExpired) {
+                log.info("Consultation {} is expired, cancelling due to invalid payment", consult.getId());
+                Integer numberOfUploadProofOfPayment = consult.hasPayment()
+                        ? consult.getPayment().getUploadProofPayment()
+                        : 0;
 
-                    consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
-                    consult.setReason(CancellationReason.INVALID_PAYMENT.getReason());
-                    consult.setCreatedAt(LocalDateTime.now());
-                    consultationRepository.save(consult);
+                Payment existingPayment = consult.getPayment();
+                if (existingPayment == null) {
+                    existingPayment = Payment.builder()
+                            .paymentMethod("")
+                            .proofPayment("")
+                            .sender("")
+                            .uploadProofPayment(0)
+                            .build();
+                    consult.setPayment(existingPayment);
+                    newPaymentsToSave.add(existingPayment);
+                } else {
+                    paymentsToUpdate.add(existingPayment);
                 }
-            } else if (consult.getStatus().equals(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus())) {
-                // Check if Consultation is Expired
-                Boolean isExpired = LocalDateTime.now().isAfter(consult.getStartDate());
-                if (isExpired) {
-                    log.info("Consultation {} is expired, cancelling due to start date in the past", consult.getId());
-                    // Update Consultation
-                    consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+
+                existingPayment.setUploadProofPayment(numberOfUploadProofOfPayment + 1);
+                // paymentRepository.save(existingPayment);
+
+                consult.setStatus(ConsultationStatus.CANCELLED.getStatus());
+                if (numberOfUploadProofOfPayment + 1 >= 2) {
                     consult.setReason(CancellationReason.SYSTEM_CANCELLED.getReason());
-                    consultationRepository.save(consult);
+                } else {
+                    consult.setReason(CancellationReason.INVALID_PAYMENT.getReason());
                 }
+                // consultationRepository.save(consult);
+                consultationsToUpdate.add(consult);
+
+            }
+
+            // SPECIAL CASE FOR SCHEDULED CONSULTATIONS BUT ROOM HAS EXPIRED
+            else if (isScheduledButRoomExpired) {
+                log.info("Consultation {} is scheduled but room has expired, Make it ended",
+                        consult.getId());
+                consult.setStatus(ConsultationStatus.ENDED.getStatus());
+                consultationsToUpdate.add(consult);
+                // consultationRepository.save(consult);
+            } else {
+                log.info("Consultation {} is still valid, no action taken", consult.getId());
+            }
+
+            // --------------- HANDLE BATCH TRANSACTION TO DB ---------------
+            if (!newPaymentsToSave.isEmpty()) {
+                log.info("Batch saving {} new payments", newPaymentsToSave.size());
+                paymentRepository.saveAll(newPaymentsToSave);
+            }
+
+            if (!paymentsToUpdate.isEmpty()) {
+                log.info("Batch updating {} existing payments", paymentsToUpdate.size());
+                paymentRepository.saveAll(paymentsToUpdate);
+            }
+
+            if (!consultationsToUpdate.isEmpty()) {
+                log.info("Batch updating {} consultations", consultationsToUpdate.size());
+                consultationRepository.saveAll(consultationsToUpdate);
             }
         }
     }
