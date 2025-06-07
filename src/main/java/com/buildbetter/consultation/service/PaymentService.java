@@ -276,6 +276,14 @@ public class PaymentService {
                         throw new ForbiddenException("Payment Attempt limit reached");
                 }
 
+                log.info("Payment Service : Check if current time is after consultation start_date");
+                Boolean consultationTimeIsStarted = LocalDateTime.now()
+                                .isAfter(consultation.getStartDate());
+
+                if (Boolean.TRUE.equals(consultationTimeIsStarted)) {
+                        throw new BadRequestException("Consultation time has already started, cannot repay payment");
+                }
+
                 consultation.setStatus(ConsultationStatus.WAITING_FOR_PAYMENT.getStatus());
                 consultation.setReason(null);
                 consultation.setCreatedAt(LocalDateTime.now());
