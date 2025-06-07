@@ -18,7 +18,7 @@ import jakarta.validation.Payload;
 @Target({ FIELD })
 @Retention(RUNTIME)
 public @interface ValidWindDirection {
-    String message() default "Each windDirection must be one of [east, south, west, north] with no duplicates";
+    String message() default "Each windDirection must be one of [east, southeast, south, southwest, west, northwest, north, northeast] with no duplicates";
 
     Class<?>[] groups() default {};
 

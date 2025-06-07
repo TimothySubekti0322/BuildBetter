@@ -142,7 +142,7 @@ public class SuggestionController {
         ApiResponseMessageOnly response = new ApiResponseMessageOnly();
         response.setCode(HttpStatus.OK.value());
         response.setStatus(HttpStatus.OK.name());
-        response.setMessage("Suggestion deleted successfully");
+        response.setMessage("Suggestion updated successfully");
 
         return response;
     }

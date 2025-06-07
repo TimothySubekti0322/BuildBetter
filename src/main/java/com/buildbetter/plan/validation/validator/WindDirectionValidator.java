@@ -12,7 +12,8 @@ import jakarta.validation.ConstraintValidatorContext;
 public class WindDirectionValidator
         implements ConstraintValidator<ValidWindDirection, List<String>> {
 
-    private static final Set<String> ALLOWED = Set.of("east", "south", "west", "north");
+    private static final Set<String> ALLOWED = Set.of("east", "southeast", "south", "southwest", "west", "northwest",
+            "north", "northeast");
 
     @Override
     public boolean isValid(List<String> values, ConstraintValidatorContext ctx) {

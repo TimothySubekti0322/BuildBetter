@@ -404,6 +404,7 @@ public class ConsultationService {
 
         consult.setStatus(ConsultationStatus.SCHEDULED.getStatus());
         consult.setRoomId(roomId);
+        consult.setReason(""); // Clear reason
 
         consultationRepository.save(consult);
 
@@ -528,6 +529,7 @@ public class ConsultationService {
         }
 
         consultation.setStatus(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus());
+        consultation.setReason("");
         consultationRepository.save(consultation);
     }
 
