@@ -527,6 +527,7 @@ public class ConsultationService {
             consultation.setTotal(request.getTotal());
         }
 
+        consultation.setStatus(ConsultationStatus.WAITING_FOR_CONFIRMATION.getStatus());
         consultationRepository.save(consultation);
     }
 
