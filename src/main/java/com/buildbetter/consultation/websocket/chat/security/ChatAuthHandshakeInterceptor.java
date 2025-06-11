@@ -1,6 +1,8 @@
 package com.buildbetter.consultation.websocket.chat.security;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -96,13 +98,24 @@ public class ChatAuthHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         /* 4. --- Check booking window ----------------------------------- */
-        LocalDateTime now = LocalDateTime.now(); // or ZonedDateTime.now(ZoneId.of("Asia/Jakarta"))
-        if (now.isBefore(room.getStartTime())) {
-            log.warn("User {} tried to access room {} before session start", requesterId, roomId);
+        // Use ZonedDateTime to make the comparison timezone-aware.
+        // It's best practice to specify the timezone your business operates in.
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Jakarta"));
+        LocalDateTime roomStartTime = room.getStartTime();
+
+        // Convert the room's start and end times to the same timezone for a correct
+        // comparison.
+        ZonedDateTime zonedStartTime = roomStartTime.atZone(ZoneId.of("Asia/Jakarta"));
+        ZonedDateTime zonedEndTime = room.getEndTime().atZone(ZoneId.of("Asia/Jakarta"));
+
+        if (now.isBefore(zonedStartTime)) {
+            log.warn("User {} tried to access room {} before session start. Current time: {}, Start time: {}",
+                    requesterId, roomId, now, zonedStartTime);
             servletResponse.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return false;
-        } else if (now.isAfter(room.getEndTime())) {
-            log.warn("User {} tried to access room {} after booking window", requesterId, roomId);
+        } else if (now.isAfter(zonedEndTime)) {
+            log.warn("User {} tried to access room {} after booking window. Current time: {}, End time: {}",
+                    requesterId, roomId, now, zonedEndTime);
             servletResponse.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return false;
         }
