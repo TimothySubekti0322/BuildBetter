@@ -18,5 +18,5 @@ public class ChatMessage {
     private String senderRole; // architect or user role
     private String content; // plain text for now
     private String type; // e.g. "TEXT", "FILE" – keep flexible
-    private LocalDateTime sentAt; // filled by server
+    private LocalDateTime sentAt;
 }

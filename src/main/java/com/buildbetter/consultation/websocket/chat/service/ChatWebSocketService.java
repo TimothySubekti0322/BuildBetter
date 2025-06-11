@@ -28,12 +28,14 @@ public class ChatWebSocketService {
                 .senderRole(inbound.getSenderRole())
                 .content(inbound.getContent())
                 .type(inbound.getType())
-                .createdAt(now)
+                .createdAt(inbound.getSentAt() != null ? inbound.getSentAt() : now)
                 .build();
 
         chatRepository.save(entity);
 
-        inbound.setSentAt(now);
+        if (inbound.getSentAt() == null) {
+            inbound.setSentAt(now);
+        }
         return inbound;
     }
 }
