@@ -9,6 +9,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.buildbetter.consultation.constant.ConsultationStatus;
 import com.buildbetter.consultation.model.Consultation;
 import com.buildbetter.consultation.model.Room;
 import com.buildbetter.consultation.repository.ConsultationRepository;
@@ -65,7 +66,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Consultation consultation = consultationRepository.findByRoomIdAndEndDate(roomId, room.getEndTime())
                     .orElseThrow(() -> new BadRequestException("Consultation not found for room: " + roomId));
 
-            consultation.setStatus("IN_PROGRESS");
+            consultation.setStatus(ConsultationStatus.IN_PROGRESS.getStatus());
             consultationRepository.save(consultation);
         }
 
