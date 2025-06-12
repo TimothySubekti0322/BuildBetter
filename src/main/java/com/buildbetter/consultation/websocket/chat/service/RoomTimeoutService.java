@@ -3,6 +3,7 @@ package com.buildbetter.consultation.websocket.chat.service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -52,7 +53,7 @@ public class RoomTimeoutService {
                 return;
             }
 
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Jakarta"));
             LocalDateTime endTime = room.getEndTime();
 
             if (now.isAfter(endTime)) {
