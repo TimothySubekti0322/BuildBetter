@@ -1,6 +1,7 @@
 package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -284,7 +285,7 @@ public class PaymentService {
                 }
 
                 log.info("Payment Service : Check if current time is after consultation start_date");
-                Boolean consultationTimeIsStarted = LocalDateTime.now()
+                Boolean consultationTimeIsStarted = LocalDateTime.now(ZoneId.of("Asia/Jakarta"))
                                 .isAfter(consultation.getStartDate());
 
                 if (Boolean.TRUE.equals(consultationTimeIsStarted)) {

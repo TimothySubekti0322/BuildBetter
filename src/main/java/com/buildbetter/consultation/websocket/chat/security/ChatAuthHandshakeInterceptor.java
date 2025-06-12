@@ -52,7 +52,7 @@ public class ChatAuthHandshakeInterceptor implements HandshakeInterceptor {
 
         String authHeader = servletRequest.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.warn("Missing JWT");
+            log.warn("ChatAuthHandshakeInterceptor: beforeHandshake - Missing JWT");
             servletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
@@ -65,11 +65,11 @@ public class ChatAuthHandshakeInterceptor implements HandshakeInterceptor {
             String idClaim = jws.getPayload().get("id", String.class);
             requesterId = UUID.fromString(idClaim);
         } catch (ExpiredJwtException ex) {
-            log.warn("Expired JWT");
+            log.warn("ChatAuthHandshakeInterceptor: beforeHandshake - Expired JWT");
             servletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         } catch (JwtException | IllegalArgumentException ex) {
-            log.warn("Invalid JWT: {}", ex.getMessage());
+            log.warn("ChatAuthHandshakeInterceptor: beforeHandshake - Invalid JWT: {}", ex.getMessage());
             servletResponse.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
@@ -82,6 +82,7 @@ public class ChatAuthHandshakeInterceptor implements HandshakeInterceptor {
         try {
             roomId = UUID.fromString(idPart);
         } catch (IllegalArgumentException ex) {
+            log.warn("ChatAuthHandshakeInterceptor: beforeHandshake - Invalid roomId in URL: {}", idPart);
             servletResponse.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             return false;
         }

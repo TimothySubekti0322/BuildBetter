@@ -1,6 +1,7 @@
 package com.buildbetter.consultation.service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +53,7 @@ public class ConsultationService {
                 "Consultation Service : createConsult - Creating consultation for user: {}, architect: {}, type: {}, start: {}, end: {}",
                 userId, request.getArchitectId(), request.getType(), request.getStartDate(), request.getEndDate());
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Jakarta"));
 
         log.info(
                 "Consultation Service : Checking if request dates are in the future and start date is before end date: {}, {}",
@@ -165,7 +166,7 @@ public class ConsultationService {
         log.info("Consultation Service : getArchitectSchedules - Fetching schedules for architect: {}", architectId);
 
         // 1) fetch all future bookings for this architect
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Jakarta"));
         List<Consultation> upcoming = consultationRepository
                 .findByArchitectIdAndStartDateGreaterThanEqualAndStatusNotOrderByStartDate(architectId, now,
                         "cancelled");
@@ -185,7 +186,7 @@ public class ConsultationService {
 
         if (upcoming != null && upcoming) {
             consults = consultationRepository.findByArchitectIdAndStartDateGreaterThanEqualOrderByStartDate(
-                    architectId, LocalDateTime.now());
+                    architectId, LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
         } else {
             consults = consultationRepository.findByArchitectIdOrderByStartDate(architectId);
         }
@@ -244,7 +245,7 @@ public class ConsultationService {
         if (Boolean.TRUE.equals(includeCancelled)) {
             if (Boolean.TRUE.equals(upcoming)) {
                 consults = consultationRepository
-                        .findByStartDateGreaterThanEqualOrderByStartDate(LocalDateTime.now());
+                        .findByStartDateGreaterThanEqualOrderByStartDate(LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
             } else {
                 consults = consultationRepository.findAll(
                         Sort.by(Sort.Direction.ASC, "startDate"));
@@ -253,7 +254,7 @@ public class ConsultationService {
             if (Boolean.TRUE.equals(upcoming)) {
                 consults = consultationRepository
                         .findByStatusNotAndStartDateGreaterThanEqualOrderByStartDate(
-                                "cancelled", LocalDateTime.now());
+                                "cancelled", LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
             } else {
                 consults = consultationRepository
                         .findByStatusNotOrderByStartDate("cancelled");
@@ -327,7 +328,8 @@ public class ConsultationService {
 
         if (upcoming != null && upcoming) {
             consults = consultationRepository
-                    .findByUserIdAndStartDateGreaterThanEqualOrderByStartDate(userId, LocalDateTime.now());
+                    .findByUserIdAndStartDateGreaterThanEqualOrderByStartDate(userId,
+                            LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
         } else {
             consults = consultationRepository.findByUserIdOrderByStartDate(userId);
         }
@@ -381,7 +383,7 @@ public class ConsultationService {
             throw new BadRequestException("Consultation is not in a state that can be approved");
         }
 
-        if (consult.getStartDate().isBefore(LocalDateTime.now())) {
+        if (consult.getStartDate().isBefore(LocalDateTime.now(ZoneId.of("Asia/Jakarta")))) {
             confirmationService.notifyRejected(consultationId.toString(),
                     CancellationReason.SYSTEM_CANCELLED);
 
@@ -458,6 +460,8 @@ public class ConsultationService {
     }
 
     public UUID userCancelConsultation(UUID consultationId, UUID userId) {
+        log.info("Consultation Service : userCancelConsultation - Cancelling consultation: {}, for user: {}",
+                consultationId, userId);
 
         Consultation consultation = consultationRepository.findById(consultationId)
                 .orElseThrow(() -> new BadRequestException("Consultation not found"));
@@ -466,10 +470,16 @@ public class ConsultationService {
             throw new BadRequestException("You are not authorized to cancel this consultation");
         }
 
+        log.info("Consultation Service : userCancelConsultation - Consultation status: {}", consultation.getStatus());
+
         Boolean consultationIsScheduledOrInProgressOrEnded = consultation.getStatus()
                 .equals(ConsultationStatus.SCHEDULED.getStatus()) ||
                 consultation.getStatus().equals(ConsultationStatus.IN_PROGRESS.getStatus()) ||
                 consultation.getStatus().equals(ConsultationStatus.ENDED.getStatus());
+
+        log.info(
+                "Consultation Service : userCancelConsultation - Consultation is scheduled or in progress or ended: {}",
+                consultationIsScheduledOrInProgressOrEnded);
 
         if (consultationIsScheduledOrInProgressOrEnded) {
             throw new BadRequestException("Consultation is not in a state that can be cancelled");
@@ -478,6 +488,9 @@ public class ConsultationService {
         consultation.setStatus(ConsultationStatus.CANCELLED.getStatus());
         consultation.setReason(CancellationReason.USER_CANCELLED.getReason());
         consultationRepository.save(consultation);
+
+        log.info("Consultation Service : userCancelConsultation - Consultation {} cancelled by user {}", consultationId,
+                userId);
 
         return consultation.getId();
     }
@@ -500,13 +513,13 @@ public class ConsultationService {
 
         // Update fields based on the request
         if (request.getStartDate() != null) {
-            if (request.getStartDate().isBefore(LocalDateTime.now())) {
+            if (request.getStartDate().isBefore(LocalDateTime.now(ZoneId.of("Asia/Jakarta")))) {
                 throw new BadRequestException("Start date cannot be in the past");
             }
             consultation.setStartDate(request.getStartDate());
         }
         if (request.getEndDate() != null) {
-            if (request.getEndDate().isBefore(LocalDateTime.now())) {
+            if (request.getEndDate().isBefore(LocalDateTime.now(ZoneId.of("Asia/Jakarta")))) {
                 throw new BadRequestException("End date cannot be in the past");
             }
             consultation.setEndDate(request.getEndDate());
@@ -572,7 +585,7 @@ public class ConsultationService {
             log.info("Found consultation: {} with status: {}", consult.getId(), consult.getStatus());
 
             Boolean consultationIsOutdated = consult.getStartDate() != null &&
-                    consult.getStartDate().isBefore(LocalDateTime.now());
+                    consult.getStartDate().isBefore(LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
             Boolean isExpired = LocalDateTime.now().isAfter(consult.getCreatedAt()
                     .plusMinutes(10));
             Boolean isWaitingForPayment = consult.getStatus()
@@ -584,7 +597,7 @@ public class ConsultationService {
                     consult.getReason().equals(CancellationReason.INVALID_PAYMENT.getReason());
             Boolean isScheduledButRoomExpired = consult.getStatus()
                     .equals(ConsultationStatus.SCHEDULED.getStatus())
-                    && consult.getEndDate().isBefore(LocalDateTime.now());
+                    && consult.getEndDate().isBefore(LocalDateTime.now(ZoneId.of("Asia/Jakarta")));
 
             if ((isWaitingForPayment || isWaitingForConfirmation || isCancelledAndInvalidPayment)
                     && consultationIsOutdated) {
