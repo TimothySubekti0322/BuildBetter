@@ -393,10 +393,16 @@ public class ConsultationService {
             throw new BadRequestException("Consultation start date cannot be in the past");
         }
 
+        LocalDateTime startDate = consult.getStartDate();
+
+        if (consult.getType().equals("offline")) {
+            startDate = startDate.minusHours(1);
+        }
+
         CreateRoomRequest roomRequest = CreateRoomRequest.builder()
                 .architectId(consult.getArchitectId())
                 .userId(consult.getUserId())
-                .startTime(consult.getStartDate())
+                .startTime(startDate)
                 .endTime(consult.getEndDate())
                 .build();
 
