@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import com.buildbetter.consultation.dto.room.CreateRoomRequest;
 import com.buildbetter.consultation.model.Room;
 import com.buildbetter.consultation.repository.RoomRepository;
+import com.buildbetter.shared.exception.BadRequestException;
+import com.buildbetter.shared.exception.ForbiddenException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,11 +64,11 @@ public class RoomService {
         log.info("Room Service : getRoomById - Room ID: {}", roomId);
 
         Room room = roomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("Room not found with ID: " + roomId));
+                .orElseThrow(() -> new BadRequestException("Room not found with ID: " + roomId));
 
         if (!room.getUserId().equals(userId) && !room.getArchitectId().equals(userId)) {
             log.error("Room Service : getRoomById - User ID: {} is not authorized to access this room", userId);
-            throw new IllegalArgumentException("User is not authorized to access this room");
+            throw new ForbiddenException("User is not authorized to access this room");
         }
 
         return room;

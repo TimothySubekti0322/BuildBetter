@@ -105,12 +105,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Optional: Cancel timeout if no participants remain (saves resources)
         // Comment this out if you want the room to timeout even with no participants
-        if (!hasRemainingParticipants) {
-            boolean cancelled = roomTimeoutService.cancelRoomTimeout(roomId);
-            if (cancelled) {
-                log.info("Cancelled timeout for empty room {}", roomId);
-            }
-        }
+        // if (!hasRemainingParticipants) {
+        // boolean cancelled = roomTimeoutService.cancelRoomTimeout(roomId);
+        // if (cancelled) {
+        // log.info("Cancelled timeout for empty room {}", roomId);
+        // }
+        // }
     }
 
     /* ------------------------------------------------ */

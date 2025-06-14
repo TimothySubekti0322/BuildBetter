@@ -34,3 +34,6 @@ build/
 
 ### Makefile ###
 Makefile
+
+### Text files ###
+*.txt

@@ -65,6 +65,7 @@ public class RoomTimeoutService {
             }
 
             Duration delay = Duration.between(now, endTime);
+            
             long delayMillis = delay.toMillis();
 
             log.info("Scheduling timeout for room {} in {} ms (endTime: {})",

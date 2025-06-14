@@ -84,7 +84,7 @@ public class ArticleController {
             @Valid @ModelAttribute UpdateArticleRequest request) {
         log.info("Article Controller : updateArticle");
 
-        articleService.UpdateArticle(request, id);
+        articleService.updateArticle(request, id);
 
         ApiResponseMessageAndData<UUID> response = new ApiResponseMessageAndData<>();
         response.setCode(HttpStatus.OK.value());

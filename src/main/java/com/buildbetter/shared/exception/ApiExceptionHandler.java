@@ -15,6 +15,7 @@ import com.buildbetter.shared.dto.ErrorResponse;
                 "com.buildbetter.plan",
                 "com.buildbetter.consultation",
                 "com.buildbetter.article",
+        
 })
 public class ApiExceptionHandler {
 

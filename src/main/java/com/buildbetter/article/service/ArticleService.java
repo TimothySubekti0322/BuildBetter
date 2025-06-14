@@ -64,7 +64,7 @@ public class ArticleService {
         return article;
     }
 
-    public void UpdateArticle(UpdateArticleRequest request, UUID id) {
+    public void updateArticle(UpdateArticleRequest request, UUID id) {
         log.info("Article Service : UpdateArticle");
         Article article = articleRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Article not found with id: " + id));
